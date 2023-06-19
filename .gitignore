@@ -1,0 +1,11 @@
+env/
+*.pyc
+__pycache__
+geckodriver.log
+.cache/
+/.idea/family-tree-flask.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
