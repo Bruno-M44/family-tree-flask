@@ -1,15 +1,16 @@
-from flask import Flask
-
-app = Flask(__name__)
-
-
-app.config.from_object('config')
+from flask import render_template
+from .models import User
+from . import models
+from run import app
 
 
 @app.route('/')
 def index():
-    return "Hello world !"
+    users = User.query.all()
+    return render_template("index.html",
+                           user_name=users)
 
 
-if __name__ == "__main__":
-    app.run()
+@app.cli.command()
+def init_db():
+    models.init_db()

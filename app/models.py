@@ -1,11 +1,7 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 import logging as lg
 
-from .views import app
-
-# Create database connection object
-db = SQLAlchemy(app)
+from app import db
 
 
 association_user_ft = db.Table(
