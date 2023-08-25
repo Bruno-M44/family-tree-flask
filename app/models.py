@@ -17,15 +17,17 @@ class User(db.Model):
     name = db.Column(db.String, nullable=False)
     surname = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
+    password = db.Column(db.String, nullable=False)
     family_trees = db.relationship(
         "FamilyTree",
         secondary=association_user_ft
     )
 
-    def __init__(self, name, surname, email):
+    def __init__(self, name, surname, email, password):
         self.name = name
         self.surname = surname
         self.email = email
+        self.password = password
 
 
 class FamilyTree(db.Model):
@@ -71,7 +73,7 @@ class Picture(db.Model):
 def init_db():
     db.drop_all()
     db.create_all()
-    user_1 = User(name="Smith", surname="John", email="john.smith@gmail.com")
+    user_1 = User(name="Smith", surname="John", email="john.smith@gmail.com", password="password1")
     family_tree_1 = FamilyTree(title="Family Smith", family_name="Smith")
     family_tree_cell_1 = FamilyTreeCell(
         name="Smith",
@@ -89,7 +91,7 @@ def init_db():
     user_1.family_trees.append(family_tree_1)
     db.session.add(user_1)
 
-    user_2 = User(name="Dalton", surname="Joe", email="joe.dalton@posteo.net")
+    user_2 = User(name="Dalton", surname="Joe", email="joe.dalton@posteo.net", password="password2")
     family_tree_2 = FamilyTree(title="Family Dalton", family_name="Dalton")
     user_2.family_trees.append(family_tree_2)
     db.session.add(user_2)
