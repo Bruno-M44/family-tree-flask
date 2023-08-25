@@ -13,6 +13,7 @@ association_user_ft = db.Table(
 
 
 class User(db.Model):
+    # query: db.Query  # autocomplete
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     surname = db.Column(db.String, nullable=False)
