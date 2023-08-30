@@ -6,15 +6,15 @@ from app import db
 
 association_user_ft = db.Table(
     "association_user_ft",
-    db.Column("user_id", db.Integer, db.ForeignKey("user.id"), primary_key=True),
-    db.Column("family_tree_id", db.Integer, db.ForeignKey("family_tree.id"), primary_key=True),
+    db.Column("id_user", db.Integer, db.ForeignKey("user.id_user"), primary_key=True),
+    db.Column("id_family_tree", db.Integer, db.ForeignKey("family_tree.id_family_tree"), primary_key=True),
     db.Column("permission", db.String, nullable=False, default="view")
 )
 
 
 class User(db.Model):
     # query: db.Query  # autocomplete
-    id = db.Column(db.Integer, primary_key=True)
+    id_user = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     surname = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
@@ -32,7 +32,7 @@ class User(db.Model):
 
 
 class FamilyTree(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id_family_tree = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     family_name = db.Column(db.String, nullable=False)
     family_tree_cells = db.relationship("FamilyTreeCell")
@@ -43,13 +43,13 @@ class FamilyTree(db.Model):
 
 
 class FamilyTreeCell(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id_family_tree_cell = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     surnames = db.Column(db.String, nullable=False)
     birthday = db.Column(db.DateTime, nullable=False)
     jobs = db.Column(db.String, nullable=False)
     comments = db.Column(db.String, nullable=False)
-    family_tree_id = db.Column(db.ForeignKey("family_tree.id"))
+    id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree"))
     pictures = db.relationship("Picture")
 
     def __init__(self, name, surnames, birthday, jobs, comments):
@@ -61,10 +61,10 @@ class FamilyTreeCell(db.Model):
 
 
 class Picture(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id_picture = db.Column(db.Integer, primary_key=True)
     picture_date = db.Column(db.DateTime, nullable=False)
     comments = db.Column(db.String, nullable=False)
-    family_tree_cell_id = db.Column(db.ForeignKey("family_tree_cell.id"))
+    id_family_tree_cell = db.Column(db.ForeignKey("family_tree_cell.id_family_tree_cell"))
 
     def __init__(self, picture_date, comments):
         self.picture_date = picture_date
