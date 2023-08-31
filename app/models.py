@@ -63,6 +63,7 @@ class FamilyTreeCell(db.Model):
 
 
 class Picture(db.Model):
+    # query: db.Query  # autocomplete
     id_picture = db.Column(db.Integer, primary_key=True)
     picture_date = db.Column(db.DateTime, nullable=False)
     comments = db.Column(db.String, nullable=False)

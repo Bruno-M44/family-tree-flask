@@ -38,5 +38,5 @@ class PictureSchema(ma.Schema):
         fields = ("id_picture", "picture_date", "comments", "id_family_tree_cell")
 
 
-picture_schema = FamilyTreeCellSchema()
-pictures_schema = FamilyTreeCellSchema(many=True)
+picture_schema = PictureSchema()
+pictures_schema = PictureSchema(many=True)

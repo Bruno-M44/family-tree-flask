@@ -1,4 +1,5 @@
 import werkzeug.exceptions
+from sqlalchemy import and_
 from flask import render_template, jsonify, make_response, request
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 
@@ -96,23 +97,30 @@ def get_family_trees(id_user):
 @app.route("/users/<int:id_user>/family_trees/<int:id_family_tree>", methods=["GET"])
 @jwt_required()
 def get_family_tree(id_user, id_family_tree):
-    family_tree = FamilyTree.query.join(association_user_ft).filter(
-        association_user_ft.c.id_user == id_user,
-        FamilyTree.id_family_tree == id_family_tree).first()
-
-    result = family_tree_schema.dump(family_tree)
-    data = {
-        "message": "Family Tree Info !",
-        "status": 200,
-        "data": result
-    }
-    return make_response(jsonify(data), data["status"])
+    try:
+        family_tree = FamilyTree.query.join(association_user_ft).filter(
+            association_user_ft.c.id_user == id_user,
+            FamilyTree.id_family_tree == id_family_tree).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        data = {
+            "message": "Bad user or family tree",
+            "status": 404,
+        }
+        return make_response(jsonify(data), data["status"])
+    else:
+        result = family_tree_schema.dump(family_tree)
+        data = {
+            "message": "Family Tree Info !",
+            "status": 200,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
 
 
 @app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["GET"])
 @jwt_required()
 def get_family_tree_cells(id_family_tree):
-    all_family_tree_cells = FamilyTreeCell.query.filter(id_family_tree == id_family_tree).all()
+    all_family_tree_cells = FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).all()
     result = family_trees_cells_schema.dump(all_family_tree_cells)
     data = {
         "message": "All Family Tree Cells !",
@@ -125,22 +133,30 @@ def get_family_tree_cells(id_family_tree):
 @app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>", methods=["GET"])
 @jwt_required()
 def get_family_tree_cell(id_family_tree, id_family_tree_cell):
-    family_tree_cell = FamilyTreeCell.query.filter(
-        id_family_tree == id_family_tree,
-        id_family_tree_cell == id_family_tree_cell).first()
-    result = family_tree_cell_schema.dump(family_tree_cell)
-    data = {
-        "message": "Family Tree Cell Info !",
-        "status": 200,
-        "data": result
-    }
-    return make_response(jsonify(data), data["status"])
+    try:
+        family_tree_cell = FamilyTreeCell.query.filter_by(
+            id_family_tree=id_family_tree,
+            id_family_tree_cell=id_family_tree_cell).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        data = {
+            "message": "Bad family tree or family tree cell",
+            "status": 404,
+        }
+        return make_response(jsonify(data), data["status"])
+    else:
+        result = family_tree_cell_schema.dump(family_tree_cell)
+        data = {
+            "message": "Family Tree Cell Info !",
+            "status": 200,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
 
 
 @app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["GET"])
 @jwt_required()
 def get_pictures(id_family_tree_cell):
-    all_pictures = Picture.query.filter(id_family_tree_cell == id_family_tree_cell).all()
+    all_pictures = Picture.query.filter_by(id_family_tree_cell=id_family_tree_cell).all()
     result = pictures_schema.dump(all_pictures)
     data = {
         "message": "All Pictures !",
@@ -153,16 +169,24 @@ def get_pictures(id_family_tree_cell):
 @app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>", methods=["GET"])
 @jwt_required()
 def get_picture(id_family_tree_cell, id_picture):
-    picture = Picture.query.filter(
-        id_family_tree_cell == id_family_tree_cell,
-        id_picture == id_picture).first()
-    result = picture_schema.dump(picture)
-    data = {
-        "message": "Picture Info !",
-        "status": 200,
-        "data": result
-    }
-    return make_response(jsonify(data), data["status"])
+    try:
+        picture = Picture.query.filter_by(
+            id_family_tree_cell=id_family_tree_cell,
+            id_picture=id_picture).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        data = {
+            "message": "Bad family tree cell or picture",
+            "status": 404,
+        }
+        return make_response(jsonify(data), data["status"])
+    else:
+        result = picture_schema.dump(picture)
+        data = {
+            "message": "Picture Info !",
+            "status": 200,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
 
 
 @app.cli.command()
