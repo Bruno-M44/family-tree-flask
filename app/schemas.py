@@ -13,3 +13,30 @@ class UserSchema(ma.Schema):
 
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
+
+
+class FamilyTreeSchema(ma.Schema):
+    class Meta:
+        fields = ("id_family_tree", "title", "family_name")
+
+
+family_tree_schema = FamilyTreeSchema()
+family_trees_schema = FamilyTreeSchema(many=True)
+
+
+class FamilyTreeCellSchema(ma.Schema):
+    class Meta:
+        fields = ("id_family_tree_cell", "name", "surnames", "birthday", "jobs", "comments", "id_family_tree")
+
+
+family_tree_cell_schema = FamilyTreeCellSchema()
+family_trees_cells_schema = FamilyTreeCellSchema(many=True)
+
+
+class PictureSchema(ma.Schema):
+    class Meta:
+        fields = ("id_picture", "picture_date", "comments", "id_family_tree_cell")
+
+
+picture_schema = FamilyTreeCellSchema()
+pictures_schema = FamilyTreeCellSchema(many=True)

@@ -32,6 +32,7 @@ class User(db.Model):
 
 
 class FamilyTree(db.Model):
+    # query: db.Query  # autocomplete
     id_family_tree = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     family_name = db.Column(db.String, nullable=False)
@@ -43,6 +44,7 @@ class FamilyTree(db.Model):
 
 
 class FamilyTreeCell(db.Model):
+    # query: db.Query  # autocomplete
     id_family_tree_cell = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     surnames = db.Column(db.String, nullable=False)
