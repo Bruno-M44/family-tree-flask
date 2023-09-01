@@ -66,7 +66,7 @@ def login():
         return response
 
 
-@app.route("/user", methods=["GET"], endpoint="user")
+@app.route("/user", methods=["GET"], endpoint="get_user")
 @jwt_required()
 def get_user():
     current_user = get_jwt_identity()
@@ -92,7 +92,54 @@ def get_user():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees", methods=["GET"], endpoint="family_trees")
+@app.route("/user", methods=["POST"], endpoint="create_user")
+def create_user():
+    email_ = request.json.get("email")
+    try:
+        User.query.filter_by(email=email_).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        new_user = User(
+            name=request.json.get("name"),
+            surname=request.json.get("surname"),
+            email=email_,
+            password=request.json.get("password")
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        result = user_schema.dump(new_user)
+        data = {
+            "message": "User Created !",
+            "status": 201,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+    else:
+        data = {
+            "message": "User already exists !",
+            "status": 403,
+        }
+        return make_response(jsonify(data), data["status"])
+
+
+@app.route("/user", methods=["PUT"], endpoint="update_user")
+@jwt_required()
+def update_user():
+    current_user = get_jwt_identity()
+    user = User.query.get(current_user)
+    for key, value in request.get_json().items():
+        user.__setattr__(key, value)
+
+    db.session.commit()
+    result = user_schema.dump(user)
+    data = {
+        "message": "User Modified !",
+        "status": 204,
+        "data": result
+    }
+    return make_response(jsonify(data), data["status"])
+
+
+@app.route("/family_trees", methods=["GET"], endpoint="get_family_trees")
 @jwt_required()
 def get_family_trees():
     current_user = get_jwt_identity()
@@ -107,9 +154,30 @@ def get_family_trees():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>", methods=["GET"], endpoint="family_tree")
+@app.route("/family_tree", methods=["POST"], endpoint="create_family_tree")
 @jwt_required()
-def get_family_tree(id_family_tree):
+def create_family_tree():
+    current_user = get_jwt_identity()
+    user = User.query.get(current_user)
+    new_family_tree = FamilyTree(
+        title=request.json.get("title"),
+        family_name=request.json.get("family_name")
+    )
+    user.family_trees.append(new_family_tree)
+    db.session.commit()
+
+    result = family_tree_schema.dump(new_family_tree)
+    data = {
+        "message": "Family Tree Created !",
+        "status": 201,
+        "data": result
+    }
+    return make_response(jsonify(data), data["status"])
+
+
+@app.route("/family_trees/<int:id_family_tree>", methods=["GET", "PUT"], endpoint="get_update_family_tree")
+@jwt_required()
+def get_update_family_tree(id_family_tree):
     current_user = get_jwt_identity()
     try:
         family_tree = FamilyTree.query.join(association_user_ft).filter(
@@ -121,11 +189,24 @@ def get_family_tree(id_family_tree):
             "status": 404,
         }
         return make_response(jsonify(data), data["status"])
-    else:
+    if request.method == "GET":
         result = family_tree_schema.dump(family_tree)
         data = {
             "message": "Family Tree Info !",
             "status": 200,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+    if request.method == "PUT":
+        family_tree = FamilyTree.query.get(id_family_tree)
+        for key, value in request.get_json().items():
+            family_tree.__setattr__(key, value)
+
+        db.session.commit()
+        result = family_tree_schema.dump(family_tree)
+        data = {
+            "message": "Family Tree Modified !",
+            "status": 204,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
