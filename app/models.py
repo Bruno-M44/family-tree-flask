@@ -57,9 +57,15 @@ class FamilyTreeCell(db.Model):
     def __init__(self, name, surnames, birthday, jobs, comments):
         self.name = name
         self.surnames = surnames
-        self.birthday = birthday
+        self.birthday = datetime.strptime(birthday, "%d/%m/%Y")
         self.jobs = jobs
         self.comments = comments
+
+    def __setattr__(self, key, value):
+        if key == "birthday":
+            super(FamilyTreeCell, self).__setattr__(key, datetime.strptime(value, "%d/%m/%Y"))
+        else:
+            super(FamilyTreeCell, self).__setattr__(key, value)
 
 
 class Picture(db.Model):
@@ -70,8 +76,14 @@ class Picture(db.Model):
     id_family_tree_cell = db.Column(db.ForeignKey("family_tree_cell.id_family_tree_cell"))
 
     def __init__(self, picture_date, comments):
-        self.picture_date = picture_date
+        self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
         self.comments = comments
+
+    def __setattr__(self, key, value):
+        if key == "picture_date":
+            super(Picture, self).__setattr__(key, datetime.strptime(str(value), "%d/%m/%Y"))
+        else:
+            super(Picture, self).__setattr__(key, value)
 
 
 def init_db():
@@ -82,12 +94,12 @@ def init_db():
     family_tree_cell_1 = FamilyTreeCell(
         name="Smith",
         surnames="John, Johnny",
-        birthday=datetime(year=1983, month=7, day=14),
+        birthday="14/07/1983",
         jobs="engineer",
         comments="my father"
     )
     picture_1 = Picture(
-        picture_date=datetime(year=1990, month=10, day=4),
+        picture_date="04/10/1990",
         comments="7 years"
     )
     family_tree_cell_1.pictures.append(picture_1)

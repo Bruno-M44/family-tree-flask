@@ -212,7 +212,7 @@ def get_update_family_tree(id_family_tree):
         return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["GET"], endpoint="family_tree_cells")
+@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["GET"], endpoint="get_family_tree_cells")
 @jwt_required()
 @VerifyUserAuthorized
 def get_family_tree_cells(id_family_tree):
@@ -226,12 +226,36 @@ def get_family_tree_cells(id_family_tree):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>",
-           methods=["GET"],
-           endpoint="family_tree_cell")
+@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["POST"], endpoint="create_family_tree_cell")
 @jwt_required()
 @VerifyUserAuthorized
-def get_family_tree_cell(id_family_tree, id_family_tree_cell):
+def create_family_tree_cell(id_family_tree):
+    family_tree = FamilyTree.query.get(id_family_tree)
+    new_family_tree_cell = FamilyTreeCell(
+        name=request.json.get("name"),
+        surnames=request.json.get("surnames"),
+        birthday=request.json.get("birthday"),
+        jobs=request.json.get("jobs"),
+        comments=request.json.get("comments")
+    )
+    family_tree.family_tree_cells.append(new_family_tree_cell)
+    db.session.commit()
+
+    result = family_tree_cell_schema.dump(new_family_tree_cell)
+    data = {
+        "message": "Family Tree Cell Created !",
+        "status": 201,
+        "data": result
+    }
+    return make_response(jsonify(data), data["status"])
+
+
+@app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>",
+           methods=["GET", "PUT"],
+           endpoint="get_update_family_tree_cell")
+@jwt_required()
+@VerifyUserAuthorized
+def get_update_family_tree_cell(id_family_tree, id_family_tree_cell):
     try:
         family_tree_cell = FamilyTreeCell.query.filter_by(
             id_family_tree=id_family_tree,
@@ -242,7 +266,8 @@ def get_family_tree_cell(id_family_tree, id_family_tree_cell):
             "status": 404,
         }
         return make_response(jsonify(data), data["status"])
-    else:
+
+    if request.method == "GET":
         result = family_tree_cell_schema.dump(family_tree_cell)
         data = {
             "message": "Family Tree Cell Info !",
@@ -251,8 +276,22 @@ def get_family_tree_cell(id_family_tree, id_family_tree_cell):
         }
         return make_response(jsonify(data), data["status"])
 
+    if request.method == "PUT":
+        family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
+        for key, value in request.get_json().items():
+            family_tree_cell.__setattr__(key, value)
 
-@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["GET"], endpoint="pictures")
+        db.session.commit()
+        result = family_tree_cell_schema.dump(family_tree_cell)
+        data = {
+            "message": "Family Tree Cell Modified !",
+            "status": 204,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+
+
+@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["GET"], endpoint="get_pictures")
 @jwt_required()
 @VerifyUserAuthorized
 def get_pictures(id_family_tree_cell):
@@ -266,12 +305,33 @@ def get_pictures(id_family_tree_cell):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
-           methods=["GET"],
-           endpoint="picture")
+@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
 @jwt_required()
 @VerifyUserAuthorized
-def get_picture(id_family_tree_cell, id_picture):
+def create_picture(id_family_tree_cell):
+    family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
+    new_picture = Picture(
+        picture_date=request.json.get("picture_date"),
+        comments=request.json.get("comments")
+    )
+    family_tree_cell.pictures.append(new_picture)
+    db.session.commit()
+
+    result = picture_schema.dump(new_picture)
+    data = {
+        "message": "Picture Created !",
+        "status": 201,
+        "data": result
+    }
+    return make_response(jsonify(data), data["status"])
+
+
+@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
+           methods=["GET", "PUT"],
+           endpoint="get_update_picture")
+@jwt_required()
+@VerifyUserAuthorized
+def get_update_picture(id_family_tree_cell, id_picture):
     try:
         picture = Picture.query.filter_by(
             id_family_tree_cell=id_family_tree_cell,
@@ -282,11 +342,25 @@ def get_picture(id_family_tree_cell, id_picture):
             "status": 404,
         }
         return make_response(jsonify(data), data["status"])
-    else:
+
+    if request.method == "GET":
         result = picture_schema.dump(picture)
         data = {
             "message": "Picture Info !",
             "status": 200,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+    if request.method == "PUT":
+        picture = Picture.query.get(id_family_tree_cell)
+        for key, value in request.get_json().items():
+            picture.__setattr__(key, value)
+
+        db.session.commit()
+        result = picture_schema.dump(picture)
+        data = {
+            "message": "Picture Modified !",
+            "status": 204,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
