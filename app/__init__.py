@@ -5,7 +5,7 @@ from sqlalchemy import event
 app = Flask(__name__)
 app.config.from_object("config")
 app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
-app.config['APPLICATION_ROOT'] = '/views'
+# app.config['APPLICATION_ROOT'] = '/views'
 
 db = SQLAlchemy(app)
 
