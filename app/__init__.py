@@ -5,7 +5,7 @@ from sqlalchemy import event
 app = Flask(__name__)
 app.config.from_object("config")
 app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
-
+app.config['APPLICATION_ROOT'] = '/views'
 
 db = SQLAlchemy(app)
 
@@ -20,4 +20,5 @@ with app.app_context():
 # the app, so we import them. We could do it earlier, but there's
 # a risk that we may run into circular dependencies, so we do it at the
 # last minute here.
-from app import views, models
+from app.views import command, user_view, family_tree_view, family_tree_cell_view, picture_view
+from app import models
