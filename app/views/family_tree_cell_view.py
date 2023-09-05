@@ -13,7 +13,7 @@ from app import db
 jwt = JWTManager(app)
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["GET"], endpoint="get_family_tree_cells")
+@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["GET"], endpoint="get_family_tree_cells_")
 @jwt_required()
 @VerifyUserAuthorized
 def get_family_tree_cells(id_family_tree):
@@ -27,7 +27,9 @@ def get_family_tree_cells(id_family_tree):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["POST"], endpoint="create_family_tree_cell")
+@app.route("/family_trees/<int:id_family_tree>/family_tree_cells",
+           methods=["POST"],
+           endpoint="create_family_tree_cell_")
 @jwt_required()
 @VerifyUserAuthorized
 def create_family_tree_cell(id_family_tree):
@@ -53,7 +55,7 @@ def create_family_tree_cell(id_family_tree):
 
 @app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>",
            methods=["GET", "PUT", "DELETE"],
-           endpoint="get_update_delete_family_tree_cell")
+           endpoint="get_update_delete_family_tree_cell_")
 @jwt_required()
 @VerifyUserAuthorized
 def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):
