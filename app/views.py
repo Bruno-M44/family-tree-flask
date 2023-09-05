@@ -139,6 +139,38 @@ def update_user():
     return make_response(jsonify(data), data["status"])
 
 
+@app.route("/user", methods=["DELETE"], endpoint="delete_user")
+@jwt_required()
+def delete_user():
+    current_user = get_jwt_identity()
+    user = User.query.get(current_user)
+    links_users_family_trees = db.session.query(association_user_ft).filter(
+        association_user_ft.c.id_user == current_user).all()
+    for id_family_tree in [link.id_family_tree for link in links_users_family_trees]:
+        if len(db.session.query(association_user_ft).filter(
+                association_user_ft.c.id_family_tree == id_family_tree).all()) == 1:
+
+            pictures_to_delete = Picture.query.join(FamilyTreeCell).filter(
+                Picture.id_family_tree_cell == FamilyTreeCell.id_family_tree_cell,
+                FamilyTreeCell.id_family_tree == id_family_tree
+            ).all()
+            for picture in pictures_to_delete:
+                db.session.delete(picture)
+            FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).delete()
+            FamilyTree.query.filter_by(id_family_tree=id_family_tree).delete()
+
+    db.session.delete(user)
+    db.session.commit()
+
+    result = user_schema.dump(user)
+    data = {
+        "message": "User Deleted !",
+        "status": 200,
+        "data": result
+    }
+    return make_response(jsonify(data), data["status"])
+
+
 @app.route("/family_trees", methods=["GET"], endpoint="get_family_trees")
 @jwt_required()
 def get_family_trees():
@@ -175,9 +207,13 @@ def create_family_tree():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>", methods=["GET", "PUT"], endpoint="get_update_family_tree")
+@app.route(
+    "/family_trees/<int:id_family_tree>",
+    methods=["GET", "PUT", "DELETE"],
+    endpoint="get_update_delete_family_tree"
+)
 @jwt_required()
-def get_update_family_tree(id_family_tree):
+def get_update_delete_family_tree(id_family_tree):
     current_user = get_jwt_identity()
     try:
         family_tree = FamilyTree.query.join(association_user_ft).filter(
@@ -207,6 +243,24 @@ def get_update_family_tree(id_family_tree):
         data = {
             "message": "Family Tree Modified !",
             "status": 204,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+
+    if request.method == "DELETE":
+        pictures_to_delete = Picture.query.join(FamilyTreeCell).filter(
+            Picture.id_family_tree_cell == FamilyTreeCell.id_family_tree_cell,
+            FamilyTreeCell.id_family_tree == id_family_tree
+        ).all()
+        for picture in pictures_to_delete:
+            db.session.delete(picture)
+        FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).delete()
+        db.session.delete(family_tree)
+        db.session.commit()
+        result = family_tree_schema.dump(family_tree)
+        data = {
+            "message": "Family Tree Deleted !",
+            "status": 200,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
@@ -251,11 +305,11 @@ def create_family_tree_cell(id_family_tree):
 
 
 @app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>",
-           methods=["GET", "PUT"],
-           endpoint="get_update_family_tree_cell")
+           methods=["GET", "PUT", "DELETE"],
+           endpoint="get_update_delete_family_tree_cell")
 @jwt_required()
 @VerifyUserAuthorized
-def get_update_family_tree_cell(id_family_tree, id_family_tree_cell):
+def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):
     try:
         family_tree_cell = FamilyTreeCell.query.filter_by(
             id_family_tree=id_family_tree,
@@ -277,7 +331,6 @@ def get_update_family_tree_cell(id_family_tree, id_family_tree_cell):
         return make_response(jsonify(data), data["status"])
 
     if request.method == "PUT":
-        family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
         for key, value in request.get_json().items():
             family_tree_cell.__setattr__(key, value)
 
@@ -286,6 +339,18 @@ def get_update_family_tree_cell(id_family_tree, id_family_tree_cell):
         data = {
             "message": "Family Tree Cell Modified !",
             "status": 204,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+
+    if request.method == "DELETE":
+        Picture.query.filter_by(id_family_tree_cell=id_family_tree_cell).delete()
+        db.session.delete(family_tree_cell)
+        db.session.commit()
+        result = picture_schema.dump(family_tree_cell)
+        data = {
+            "message": "Family Tree Cell Deleted !",
+            "status": 200,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
@@ -327,11 +392,11 @@ def create_picture(id_family_tree_cell):
 
 
 @app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
-           methods=["GET", "PUT"],
-           endpoint="get_update_picture")
+           methods=["GET", "PUT", "DELETE"],
+           endpoint="get_update_delete_picture")
 @jwt_required()
 @VerifyUserAuthorized
-def get_update_picture(id_family_tree_cell, id_picture):
+def get_update_delete_picture(id_family_tree_cell, id_picture):
     try:
         picture = Picture.query.filter_by(
             id_family_tree_cell=id_family_tree_cell,
@@ -351,8 +416,8 @@ def get_update_picture(id_family_tree_cell, id_picture):
             "data": result
         }
         return make_response(jsonify(data), data["status"])
+
     if request.method == "PUT":
-        picture = Picture.query.get(id_family_tree_cell)
         for key, value in request.get_json().items():
             picture.__setattr__(key, value)
 
@@ -361,6 +426,17 @@ def get_update_picture(id_family_tree_cell, id_picture):
         data = {
             "message": "Picture Modified !",
             "status": 204,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
+
+    if request.method == "DELETE":
+        db.session.delete(picture)
+        db.session.commit()
+        result = picture_schema.dump(picture)
+        data = {
+            "message": "Picture Deleted !",
+            "status": 200,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
