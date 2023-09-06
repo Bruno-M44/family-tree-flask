@@ -1,5 +1,8 @@
+from flask import Blueprint
 from .. import models
-from run import app
+
+
+app = Blueprint("app", __name__)
 
 
 @app.cli.command()

@@ -1,9 +1,4 @@
-from flask_marshmallow import Marshmallow
-
-from run import app
-
-
-ma = Marshmallow(app)
+from app import ma
 
 
 class UserSchema(ma.Schema):

@@ -1,18 +1,15 @@
 import werkzeug.exceptions
-from flask import jsonify, make_response, request
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from flask import jsonify, make_response, request, Blueprint
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..models import User, FamilyTree, association_user_ft, FamilyTreeCell, Picture
 from ..schemas import family_trees_schema, family_tree_schema
-
-from run import app
 from app import db
 
+family_tree_app = Blueprint("family_tree_app", __name__)
 
-jwt = JWTManager(app)
 
-
-@app.route("/family_trees", methods=["GET"], endpoint="get_family_trees")
+@family_tree_app.route("/family_trees", methods=["GET"], endpoint="get_family_trees")
 @jwt_required()
 def get_family_trees():
     current_user = get_jwt_identity()
@@ -27,7 +24,7 @@ def get_family_trees():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_tree", methods=["POST"], endpoint="create_family_tree")
+@family_tree_app.route("/family_tree", methods=["POST"], endpoint="create_family_tree")
 @jwt_required()
 def create_family_tree():
     current_user = get_jwt_identity()
@@ -48,7 +45,7 @@ def create_family_tree():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route(
+@family_tree_app.route(
     "/family_trees/<int:id_family_tree>",
     methods=["GET", "PUT", "DELETE"],
     endpoint="get_update_delete_family_tree"

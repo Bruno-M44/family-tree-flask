@@ -1,19 +1,21 @@
 import werkzeug.exceptions
-from flask import jsonify, make_response, request
-from flask_jwt_extended import JWTManager, jwt_required
+from flask import jsonify, make_response, request, Blueprint
+from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTree, FamilyTreeCell, Picture
 from ..schemas import family_trees_cells_schema, family_tree_cell_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
-
-from run import app
 from app import db
 
 
-jwt = JWTManager(app)
+family_tree_cell_app = Blueprint("family_tree_cell_app", __name__)
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells", methods=["GET"], endpoint="get_family_tree_cells")
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells",
+    methods=["GET"],
+    endpoint="get_family_tree_cells"
+)
 @jwt_required()
 @VerifyUserAuthorized
 def get_family_tree_cells(id_family_tree):
@@ -27,9 +29,11 @@ def get_family_tree_cells(id_family_tree):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells",
-           methods=["POST"],
-           endpoint="create_family_tree_cell")
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells",
+    methods=["POST"],
+    endpoint="create_family_tree_cell"
+)
 @jwt_required()
 @VerifyUserAuthorized
 def create_family_tree_cell(id_family_tree):
@@ -53,9 +57,10 @@ def create_family_tree_cell(id_family_tree):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>",
-           methods=["GET", "PUT", "DELETE"],
-           endpoint="get_update_delete_family_tree_cell")
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>",
+    methods=["GET", "PUT", "DELETE"],
+    endpoint="get_update_delete_family_tree_cell")
 @jwt_required()
 @VerifyUserAuthorized
 def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):

@@ -1,41 +1,16 @@
 import werkzeug.exceptions
-from flask import jsonify, make_response, request
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask import jsonify, make_response, request, Blueprint
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 from ..models import User, FamilyTree, association_user_ft, FamilyTreeCell, Picture
 from ..schemas import user_schema, family_tree_schema
-
-from run import app
 from app import db
 
 
-jwt = JWTManager(app)
+user_app = Blueprint("user_app", __name__)
 
 
-@app.route("/login", methods=["POST"], endpoint="login")
-def login():
-    email_ = request.json.get("email")
-    password_ = request.json.get("password")
-    try:
-        id_user = User.query.filter_by(email=email_, password=password_).first_or_404().id_user
-    except werkzeug.exceptions.NotFound:
-        data = {
-            "message": "Bad username or password",
-            "status": 404,
-        }
-        return make_response(jsonify(data), data["status"])
-    else:
-        result = create_access_token(identity=id_user)
-        data = {
-            "message": "Token !",
-            "status": 200,
-            "data": result
-        }
-        response = make_response(jsonify(data), data["status"])
-        return response
-
-
-@app.route("/user", methods=["GET"], endpoint="get_user")
+@user_app.route("/user", methods=["GET"], endpoint="get_user")
 @jwt_required()
 def get_user():
     current_user = get_jwt_identity()
@@ -61,7 +36,7 @@ def get_user():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/user", methods=["POST"], endpoint="create_user")
+@user_app.route("/user", methods=["POST"], endpoint="create_user")
 def create_user():
     email_ = request.json.get("email")
     try:
@@ -90,7 +65,7 @@ def create_user():
         return make_response(jsonify(data), data["status"])
 
 
-@app.route("/user", methods=["PUT"], endpoint="update_user")
+@user_app.route("/user", methods=["PUT"], endpoint="update_user")
 @jwt_required()
 def update_user():
     current_user = get_jwt_identity()
@@ -108,7 +83,7 @@ def update_user():
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/user", methods=["DELETE"], endpoint="delete_user")
+@user_app.route("/user", methods=["DELETE"], endpoint="delete_user")
 @jwt_required()
 def delete_user():
     current_user = get_jwt_identity()

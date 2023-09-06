@@ -1,25 +1,41 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import event
+from flask_jwt_extended import JWTManager
+from flask_marshmallow import Marshmallow
 
-app = Flask(__name__)
-app.config.from_object("config")
-app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
-# app.config['APPLICATION_ROOT'] = '/views'
-
-db = SQLAlchemy(app)
-
-# Ensure FOREIGN KEY for sqlite3
-def _fk_pragma_on_connect(dbapi_con, con_record):  # noqa
-    dbapi_con.execute('pragma foreign_keys=ON')
+db = SQLAlchemy()
+jwt = JWTManager()
+ma = Marshmallow()
 
 
-with app.app_context():
-    event.listen(db.engine, "connect", _fk_pragma_on_connect)
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object("config")
+    app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
+    # app.config['APPLICATION_ROOT'] = '/views'
 
-# We need to make sure Flask knows about its views and models before we run
-# the app, so we import them. We could do it earlier, but there's
-# a risk that we may run into circular dependencies, so we do it at the
-# last minute here.
-from app.views import command, user_view, family_tree_view, family_tree_cell_view, picture_view
-from app import models
+    db.init_app(app)
+    jwt.init_app(app)
+    ma.init_app(app)
+
+    # Ensure FOREIGN KEY for sqlite3
+    def _fk_pragma_on_connect(dbapi_con, con_record):  # noqa
+        dbapi_con.execute('pragma foreign_keys=ON')
+
+    with app.app_context():
+        event.listen(db.engine, "connect", _fk_pragma_on_connect)
+
+    from app.views.login_view import login_app
+    from app.views.user_view import user_app
+    from app.views.family_tree_view import family_tree_app
+    from app.views.family_tree_cell_view import family_tree_cell_app
+    from app.views.picture_view import picture_app
+
+    app.register_blueprint(login_app)
+    app.register_blueprint(user_app)
+    app.register_blueprint(family_tree_app)
+    app.register_blueprint(family_tree_cell_app)
+    app.register_blueprint(picture_app)
+
+    return app

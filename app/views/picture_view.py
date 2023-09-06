@@ -1,19 +1,17 @@
 import werkzeug.exceptions
-from flask import jsonify, make_response, request
-from flask_jwt_extended import JWTManager, jwt_required
+from flask import jsonify, make_response, request, Blueprint
+from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTreeCell, Picture
 from ..schemas import pictures_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
-
-from run import app
 from app import db
 
 
-jwt = JWTManager(app)
+picture_app = Blueprint("picture_app", __name__)
 
 
-@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["GET"], endpoint="get_pictures")
+@picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["GET"], endpoint="get_pictures")
 @jwt_required()
 @VerifyUserAuthorized
 def get_pictures(id_family_tree_cell):
@@ -27,7 +25,7 @@ def get_pictures(id_family_tree_cell):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
+@picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
 @jwt_required()
 @VerifyUserAuthorized
 def create_picture(id_family_tree_cell):
@@ -48,7 +46,7 @@ def create_picture(id_family_tree_cell):
     return make_response(jsonify(data), data["status"])
 
 
-@app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
+@picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
            methods=["GET", "PUT", "DELETE"],
            endpoint="get_update_delete_picture")
 @jwt_required()
