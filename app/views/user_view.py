@@ -1,6 +1,6 @@
 import werkzeug.exceptions
 from flask import jsonify, make_response, request, Blueprint
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..models import User, FamilyTree, association_user_ft, FamilyTreeCell, Picture
 from ..schemas import user_schema, family_tree_schema
@@ -14,7 +14,7 @@ user_app = Blueprint("user_app", __name__)
 @jwt_required()
 def get_user():
     current_user = get_jwt_identity()
-    user = User.query.get(current_user)
+    user = db.session.get(User, current_user)
     result = user_schema.dump(user)
     family_trees = FamilyTree.query.join(association_user_ft).filter(
         association_user_ft.c.id_user == current_user).all()
@@ -87,7 +87,7 @@ def update_user():
 @jwt_required()
 def delete_user():
     current_user = get_jwt_identity()
-    user = User.query.get(current_user)
+    user = db.session.get(User, current_user)
     links_users_family_trees = db.session.query(association_user_ft).filter(
         association_user_ft.c.id_user == current_user).all()
     for id_family_tree in [link.id_family_tree for link in links_users_family_trees]:
