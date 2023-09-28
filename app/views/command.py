@@ -2,9 +2,9 @@ from flask import Blueprint
 from .. import models
 
 
-app = Blueprint("app", __name__)
+command_app = Blueprint("command_app", __name__)
 
 
-@app.cli.command()
+@command_app.cli.command()
 def init_db():
     models.init_db()

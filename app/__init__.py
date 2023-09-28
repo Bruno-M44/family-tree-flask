@@ -31,11 +31,13 @@ def create_app():
     from app.views.family_tree_view import family_tree_app
     from app.views.family_tree_cell_view import family_tree_cell_app
     from app.views.picture_view import picture_app
+    from app.views.command import command_app
 
     app.register_blueprint(login_app)
     app.register_blueprint(user_app)
     app.register_blueprint(family_tree_app)
     app.register_blueprint(family_tree_cell_app)
     app.register_blueprint(picture_app)
+    app.register_blueprint(command_app)
 
     return app

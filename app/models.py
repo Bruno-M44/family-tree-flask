@@ -12,6 +12,20 @@ association_user_ft = db.Table(
     db.Column("permission", db.String, nullable=False, default="view")
 )
 
+association_parent_child = db.Table(
+    "association_parent_child",
+    db.Column(
+        "id_family_tree_cell_parent",
+        db.Integer,
+        db.ForeignKey("family_tree_cell.id_family_tree_cell"), primary_key=True
+    ),
+    db.Column(
+        "id_family_tree_cell_child",
+        db.Integer,
+        db.ForeignKey("family_tree_cell.id_family_tree_cell"), primary_key=True
+    )
+)
+
 
 class User(db.Model):
     # query: db.Query  # autocomplete
@@ -55,6 +69,13 @@ class FamilyTreeCell(db.Model):
     comments = db.Column(db.String, nullable=False)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
     pictures = db.relationship("Picture", backref=db.backref("family_tree_cell", cascade='delete'))
+    parent = db.relationship(
+        "FamilyTreeCell",
+        secondary="association_parent_child",
+        primaryjoin="association_parent_child.c.id_family_tree_cell_parent == FamilyTreeCell.id_family_tree_cell",
+        secondaryjoin="association_parent_child.c.id_family_tree_cell_child == FamilyTreeCell.id_family_tree_cell",
+        backref=db.backref("parents")
+    )
 
     def __init__(self, name: str, surnames: str, birthday: str, jobs: str, comments: str):
         self.name = name
@@ -102,11 +123,19 @@ def init_db():
         jobs="engineer",
         comments="my father"
     )
+    family_tree_cell_2 = FamilyTreeCell(
+        name="Smith",
+        surnames="Jimmy",
+        birthday="17/09/1999",
+        jobs="fireman",
+        comments="son"
+    )
     picture_1 = Picture(
         picture_date="04/10/1990",
         comments="7 years"
     )
     family_tree_cell_1.pictures.append(picture_1)
+    family_tree_cell_1.parent.append(family_tree_cell_2)
     family_tree_1.family_tree_cells.append(family_tree_cell_1)
     user_1.family_trees.append(family_tree_1)
     db.session.add(user_1)
