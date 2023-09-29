@@ -137,6 +137,7 @@ def init_db():
     family_tree_cell_1.pictures.append(picture_1)
     family_tree_cell_1.parent.append(family_tree_cell_2)
     family_tree_1.family_tree_cells.append(family_tree_cell_1)
+    family_tree_1.family_tree_cells.append(family_tree_cell_2)
     user_1.family_trees.append(family_tree_1)
     db.session.add(user_1)
 

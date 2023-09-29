@@ -24,7 +24,6 @@ class FamilyTreeCellSchema(ma.Schema):
 
 
 family_tree_cell_schema = FamilyTreeCellSchema()
-family_trees_cells_schema = FamilyTreeCellSchema(many=True)
 
 
 class PictureSchema(ma.Schema):

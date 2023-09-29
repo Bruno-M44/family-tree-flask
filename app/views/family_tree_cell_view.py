@@ -2,8 +2,8 @@ import werkzeug.exceptions
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required
 
-from ..models import FamilyTree, FamilyTreeCell, Picture
-from ..schemas import family_trees_cells_schema, family_tree_cell_schema, picture_schema
+from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child
+from ..schemas import family_tree_cell_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
 from app import db
 
@@ -19,8 +19,14 @@ family_tree_cell_app = Blueprint("family_tree_cell_app", __name__)
 @jwt_required()
 @VerifyUserAuthorized
 def get_family_tree_cells(id_family_tree):
-    all_family_tree_cells = FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).all()
-    result = family_trees_cells_schema.dump(all_family_tree_cells)
+    family_tree_cells = FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).all()
+    result = []
+
+    for family_tree_cell in family_tree_cells:
+        family_tree_cell_result = family_tree_cell_schema.dump(family_tree_cell)
+        family_tree_cell_result["children"] = get_children(family_tree_cell=family_tree_cell)
+        result.append(family_tree_cell_result)
+
     data = {
         "message": "All Family Tree Cells !",
         "status": 200,
@@ -77,6 +83,8 @@ def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):
 
     if request.method == "GET":
         result = family_tree_cell_schema.dump(family_tree_cell)
+        result["children"] = get_children(family_tree_cell=family_tree_cell)
+
         data = {
             "message": "Family Tree Cell Info !",
             "status": 200,
@@ -108,3 +116,16 @@ def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):
             "data": result
         }
         return make_response(jsonify(data), data["status"])
+
+
+def get_children(family_tree_cell):
+    children = db.session.query(
+        association_parent_child).filter(
+        association_parent_child.c.id_family_tree_cell_parent == family_tree_cell.id_family_tree_cell
+    ).all()
+
+    return [
+        family_tree_cell_schema.dump(
+            FamilyTreeCell.query.filter_by(id_family_tree_cell=child.id_family_tree_cell_parent).first_or_404())
+        for child in children
+    ]
