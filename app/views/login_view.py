@@ -1,6 +1,6 @@
 import werkzeug.exceptions
 from flask import jsonify, make_response, request, Blueprint
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 
 from ..models import User
 
@@ -29,3 +29,18 @@ def login():
         }
         response = make_response(jsonify(data), data["status"])
         return response
+
+
+@login_app.route("/refresh", methods=["POST"], endpoint="refresh")
+@jwt_required()
+def login():
+    current_user = get_jwt_identity()
+
+    result = create_access_token(identity=current_user)
+    data = {
+        "message": "Refresh Token !",
+        "status": 200,
+        "data": result
+    }
+    response = make_response(jsonify(data), data["status"])
+    return response
