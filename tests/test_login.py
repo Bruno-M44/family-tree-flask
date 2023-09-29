@@ -1,11 +1,10 @@
 import json
-import pytest
 
 from .conftest import client
 from .credentials import UserCredential
 
 
-def test_login(credentials, client):
+def test_login(client):
     response = client.post(
         "/login",
         headers={'Content-Type': 'application/json'},

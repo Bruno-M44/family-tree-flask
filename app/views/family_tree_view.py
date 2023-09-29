@@ -51,7 +51,7 @@ def create_family_tree():
     endpoint="get_update_delete_family_tree"
 )
 @jwt_required()
-def get_update_delete_family_tree(id_family_tree):
+def get_update_delete_family_tree(id_family_tree: int):
     current_user = get_jwt_identity()
     try:
         family_tree = FamilyTree.query.join(association_user_ft).filter(

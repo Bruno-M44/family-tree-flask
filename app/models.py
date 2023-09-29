@@ -84,14 +84,6 @@ class FamilyTreeCell(db.Model):
         self.jobs = jobs
         self.comments = comments
 
-    # def __setattr__(self, key, value):
-    #     print("---key :", key)
-    #     if key == "birthday":
-    #         print(key, value, type(value))
-    #         super(FamilyTreeCell, self).__setattr__(key, datetime.strptime(value, "%d/%m/%Y"))
-    #     else:
-    #         super(FamilyTreeCell, self).__setattr__(key, value)
-
 
 class Picture(db.Model):
     # query: db.Query  # autocomplete
@@ -103,12 +95,6 @@ class Picture(db.Model):
     def __init__(self, picture_date, comments):
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
         self.comments = comments
-
-    # def __setattr__(self, key, value):
-    #     if key == "picture_date":
-    #         super(Picture, self).__setattr__(key, datetime.strptime(str(value), "%d/%m/%Y"))
-    #     else:
-    #         super(Picture, self).__setattr__(key, value)
 
 
 def init_db():

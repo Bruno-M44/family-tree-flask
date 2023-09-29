@@ -18,12 +18,13 @@ family_tree_cell_app = Blueprint("family_tree_cell_app", __name__)
 )
 @jwt_required()
 @VerifyUserAuthorized
-def get_family_tree_cells(id_family_tree):
+def get_family_tree_cells(id_family_tree: int):
     family_tree_cells = FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).all()
     result = []
 
     for family_tree_cell in family_tree_cells:
         family_tree_cell_result = family_tree_cell_schema.dump(family_tree_cell)
+        print(type(family_tree_cell))
         family_tree_cell_result["children"] = get_children(family_tree_cell=family_tree_cell)
         result.append(family_tree_cell_result)
 
@@ -42,7 +43,7 @@ def get_family_tree_cells(id_family_tree):
 )
 @jwt_required()
 @VerifyUserAuthorized
-def create_family_tree_cell(id_family_tree):
+def create_family_tree_cell(id_family_tree: int):
     family_tree = FamilyTree.query.get(id_family_tree)
     new_family_tree_cell = FamilyTreeCell(
         name=request.json.get("name"),
@@ -69,7 +70,7 @@ def create_family_tree_cell(id_family_tree):
     endpoint="get_update_delete_family_tree_cell")
 @jwt_required()
 @VerifyUserAuthorized
-def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):
+def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell: int):
     try:
         family_tree_cell = FamilyTreeCell.query.filter_by(
             id_family_tree=id_family_tree,
@@ -118,7 +119,7 @@ def get_update_delete_family_tree_cell(id_family_tree, id_family_tree_cell):
         return make_response(jsonify(data), data["status"])
 
 
-def get_children(family_tree_cell):
+def get_children(family_tree_cell: FamilyTreeCell) -> list:
     children = db.session.query(
         association_parent_child).filter(
         association_parent_child.c.id_family_tree_cell_parent == family_tree_cell.id_family_tree_cell

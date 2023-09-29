@@ -14,7 +14,7 @@ picture_app = Blueprint("picture_app", __name__)
 @picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["GET"], endpoint="get_pictures")
 @jwt_required()
 @VerifyUserAuthorized
-def get_pictures(id_family_tree_cell):
+def get_pictures(id_family_tree_cell: int):
     all_pictures = Picture.query.filter_by(id_family_tree_cell=id_family_tree_cell).all()
     result = pictures_schema.dump(all_pictures)
     data = {
@@ -28,7 +28,7 @@ def get_pictures(id_family_tree_cell):
 @picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
 @jwt_required()
 @VerifyUserAuthorized
-def create_picture(id_family_tree_cell):
+def create_picture(id_family_tree_cell: int):
     family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
     new_picture = Picture(
         picture_date=request.json.get("picture_date"),
@@ -46,12 +46,14 @@ def create_picture(id_family_tree_cell):
     return make_response(jsonify(data), data["status"])
 
 
-@picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
-           methods=["GET", "PUT", "DELETE"],
-           endpoint="get_update_delete_picture")
+@picture_app.route(
+    "/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
+    methods=["GET", "PUT", "DELETE"],
+    endpoint="get_update_delete_picture"
+)
 @jwt_required()
 @VerifyUserAuthorized
-def get_update_delete_picture(id_family_tree_cell, id_picture):
+def get_update_delete_picture(id_family_tree_cell: int, id_picture: int):
     try:
         picture = Picture.query.filter_by(
             id_family_tree_cell=id_family_tree_cell,
