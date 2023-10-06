@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import event
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
+from flask_cors import CORS
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -15,6 +16,7 @@ def create_app():
     app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
     # app.config['APPLICATION_ROOT'] = '/views'
 
+    CORS(app)
     db.init_app(app)
     jwt.init_app(app)
     ma.init_app(app)
