@@ -116,14 +116,23 @@ def init_db():
         jobs="fireman",
         comments="son"
     )
+    family_tree_cell_3 = FamilyTreeCell(
+        name="Smith",
+        surnames="Sarah",
+        birthday="12/02/2002",
+        jobs="director",
+        comments="daughter"
+    )
     picture_1 = Picture(
         picture_date="04/10/1990",
         comments="7 years"
     )
     family_tree_cell_1.pictures.append(picture_1)
     family_tree_cell_1.parent.append(family_tree_cell_2)
+    family_tree_cell_1.parent.append(family_tree_cell_3)
     family_tree_1.family_tree_cells.append(family_tree_cell_1)
     family_tree_1.family_tree_cells.append(family_tree_cell_2)
+    family_tree_1.family_tree_cells.append(family_tree_cell_3)
     user_1.family_trees.append(family_tree_1)
     db.session.add(user_1)
 

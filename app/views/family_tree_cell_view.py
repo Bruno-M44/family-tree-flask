@@ -24,7 +24,6 @@ def get_family_tree_cells(id_family_tree: int):
 
     for family_tree_cell in family_tree_cells:
         family_tree_cell_result = family_tree_cell_schema.dump(family_tree_cell)
-        print(type(family_tree_cell))
         family_tree_cell_result["children"] = get_children(family_tree_cell=family_tree_cell)
         result.append(family_tree_cell_result)
 
@@ -127,6 +126,6 @@ def get_children(family_tree_cell: FamilyTreeCell) -> list:
 
     return [
         family_tree_cell_schema.dump(
-            FamilyTreeCell.query.filter_by(id_family_tree_cell=child.id_family_tree_cell_parent).first_or_404())
+            FamilyTreeCell.query.filter_by(id_family_tree_cell=child.id_family_tree_cell_child).first_or_404())
         for child in children
     ]
