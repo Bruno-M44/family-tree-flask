@@ -123,6 +123,41 @@ def init_db():
         jobs="director",
         comments="daughter"
     )
+    family_tree_cell_4 = FamilyTreeCell(
+        name="Jackson",
+        surnames="Bob",
+        birthday="05/10/1961",
+        jobs="factory worker",
+        comments="grand father"
+    )
+    family_tree_cell_5 = FamilyTreeCell(
+        name="Smith",
+        surnames="Franklin",
+        birthday="30/09/1956",
+        jobs="soldier",
+        comments="grand father"
+    )
+    family_tree_cell_6 = FamilyTreeCell(
+        name="Roosvelt",
+        surnames="Amanda",
+        birthday="25/12/1957",
+        jobs="secretary",
+        comments="grand mother"
+    )
+    family_tree_cell_7 = FamilyTreeCell(
+        name="Gallagher",
+        surnames="Shannon",
+        birthday="04/02/1962",
+        jobs="housewife",
+        comments="grand mother"
+    )
+    family_tree_cell_8 = FamilyTreeCell(
+        name="Lockler",
+        surnames="Roseanne",
+        birthday="05/05/1980",
+        jobs="hairdresser",
+        comments="mother"
+    )
     picture_1 = Picture(
         picture_date="04/10/1990",
         comments="7 years"
@@ -130,9 +165,20 @@ def init_db():
     family_tree_cell_1.pictures.append(picture_1)
     family_tree_cell_1.parent.append(family_tree_cell_2)
     family_tree_cell_1.parent.append(family_tree_cell_3)
+    family_tree_cell_8.parent.append(family_tree_cell_2)
+    family_tree_cell_8.parent.append(family_tree_cell_3)
+    family_tree_cell_4.parent.append(family_tree_cell_1)
+    family_tree_cell_5.parent.append(family_tree_cell_8)
+    family_tree_cell_6.parent.append(family_tree_cell_1)
+    family_tree_cell_7.parent.append(family_tree_cell_8)
     family_tree_1.family_tree_cells.append(family_tree_cell_1)
     family_tree_1.family_tree_cells.append(family_tree_cell_2)
     family_tree_1.family_tree_cells.append(family_tree_cell_3)
+    family_tree_1.family_tree_cells.append(family_tree_cell_4)
+    family_tree_1.family_tree_cells.append(family_tree_cell_5)
+    family_tree_1.family_tree_cells.append(family_tree_cell_6)
+    family_tree_1.family_tree_cells.append(family_tree_cell_7)
+    family_tree_1.family_tree_cells.append(family_tree_cell_8)
     user_1.family_trees.append(family_tree_1)
     db.session.add(user_1)
 
