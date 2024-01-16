@@ -51,7 +51,15 @@ def create_family_tree_cell(id_family_tree: int):
         jobs=request.json.get("jobs"),
         comments=request.json.get("comments")
     )
+    for child in request.json.get("children"):
+        new_family_tree_cell.parent.append(FamilyTreeCell.query.get(child))
+
+    for parent in request.json.get("parents"):
+        family_tree_cell_parent = FamilyTreeCell.query.get(parent)
+        family_tree_cell_parent.parent.append(new_family_tree_cell)
+
     family_tree.family_tree_cells.append(new_family_tree_cell)
+
     db.session.commit()
 
     result = family_tree_cell_schema.dump(new_family_tree_cell)
