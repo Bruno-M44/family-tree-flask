@@ -52,7 +52,7 @@ class FamilyTree(db.Model):
     id_family_tree = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     family_name = db.Column(db.String, nullable=False)
-    family_tree_cells = db.relationship("FamilyTreeCell", backref=db.backref("family_tree", cascade='delete'))
+    family_tree_cells = db.relationship("FamilyTreeCell", backref=db.backref("family_tree"))
 
     def __init__(self, title, family_name):
         self.title = title
