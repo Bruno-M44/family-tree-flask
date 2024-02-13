@@ -26,6 +26,20 @@ association_parent_child = db.Table(
     )
 )
 
+association_couple = db.Table(
+    "association_couple",
+    db.Column(
+        "id_family_tree_cell_couple_1",
+        db.Integer,
+        db.ForeignKey("family_tree_cell.id_family_tree_cell"), primary_key=True
+    ),
+    db.Column(
+        "id_family_tree_cell_couple_2",
+        db.Integer,
+        db.ForeignKey("family_tree_cell.id_family_tree_cell"), primary_key=True
+    )
+)
+
 
 class User(db.Model):
     # query: db.Query  # autocomplete
@@ -75,6 +89,13 @@ class FamilyTreeCell(db.Model):
         primaryjoin="association_parent_child.c.id_family_tree_cell_parent == FamilyTreeCell.id_family_tree_cell",
         secondaryjoin="association_parent_child.c.id_family_tree_cell_child == FamilyTreeCell.id_family_tree_cell",
         backref=db.backref("parents")
+    )
+    couple = db.relationship(
+        "FamilyTreeCell",
+        secondary="association_couple",
+        primaryjoin="association_couple.c.id_family_tree_cell_couple_1 == FamilyTreeCell.id_family_tree_cell",
+        secondaryjoin="association_couple.c.id_family_tree_cell_couple_2 == FamilyTreeCell.id_family_tree_cell",
+        backref=db.backref("couples")
     )
 
     def __init__(self, name: str, surnames: str, birthday: str, jobs: str, comments: str):
@@ -171,6 +192,9 @@ def init_db():
     family_tree_cell_5.parent.append(family_tree_cell_8)
     family_tree_cell_6.parent.append(family_tree_cell_1)
     family_tree_cell_7.parent.append(family_tree_cell_8)
+    family_tree_cell_1.couple.append(family_tree_cell_8)
+    family_tree_cell_5.couple.append(family_tree_cell_7)
+    family_tree_cell_6.couple.append(family_tree_cell_4)
     family_tree_1.family_tree_cells.append(family_tree_cell_1)
     family_tree_1.family_tree_cells.append(family_tree_cell_2)
     family_tree_1.family_tree_cells.append(family_tree_cell_3)
