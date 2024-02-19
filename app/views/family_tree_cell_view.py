@@ -2,10 +2,11 @@ import werkzeug.exceptions
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required
 
-from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child
+from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child, association_couple
 from ..schemas import family_tree_cell_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
 from app import db
+from sqlalchemy import or_
 
 
 family_tree_cell_app = Blueprint("family_tree_cell_app", __name__)
@@ -25,6 +26,7 @@ def get_family_tree_cells(id_family_tree: int):
     for family_tree_cell in family_tree_cells:
         family_tree_cell_result = family_tree_cell_schema.dump(family_tree_cell)
         family_tree_cell_result["children"] = get_children(family_tree_cell=family_tree_cell)
+        family_tree_cell_result["couples"] = get_couples(family_tree_cell=family_tree_cell)
         result.append(family_tree_cell_result)
 
     data = {
@@ -92,6 +94,7 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
     if request.method == "GET":
         result = family_tree_cell_schema.dump(family_tree_cell)
         result["children"] = get_children(family_tree_cell=family_tree_cell)
+        result["couples"] = get_couples(family_tree_cell=family_tree_cell)
 
         data = {
             "message": "Family Tree Cell Info !",
@@ -136,4 +139,17 @@ def get_children(family_tree_cell: FamilyTreeCell) -> list:
         family_tree_cell_schema.dump(
             FamilyTreeCell.query.filter_by(id_family_tree_cell=child.id_family_tree_cell_child).first_or_404())
         for child in children
+    ]
+
+
+def get_couples(family_tree_cell: FamilyTreeCell) -> list:
+    couples = db.session.query(association_couple).filter(or_(
+        association_couple.c.id_family_tree_cell_couple_1 == family_tree_cell.id_family_tree_cell,
+        association_couple.c.id_family_tree_cell_couple_2 == family_tree_cell.id_family_tree_cell
+    )).all()
+    couples = [couple[0] if couple[0] != family_tree_cell.id_family_tree_cell else couple[1] for couple in couples]
+    return [
+        family_tree_cell_schema.dump(
+            FamilyTreeCell.query.filter_by(id_family_tree_cell=couple).first_or_404())
+        for couple in couples
     ]
