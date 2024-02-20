@@ -37,7 +37,9 @@ association_couple = db.Table(
         "id_family_tree_cell_couple_2",
         db.Integer,
         db.ForeignKey("family_tree_cell.id_family_tree_cell"), primary_key=True
-    )
+    ),
+    db.Column("start_union", db.DateTime, nullable=True),
+    db.Column("end_union", db.DateTime, nullable=True)
 )
 
 

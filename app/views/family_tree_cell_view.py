@@ -3,7 +3,7 @@ from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child, association_couple
-from ..schemas import family_tree_cell_schema, picture_schema
+from ..schemas import family_tree_cell_schema, picture_schema, family_tree_cell_couple_schema
 from .verify_user_authorized import VerifyUserAuthorized
 from app import db
 from sqlalchemy import or_
@@ -147,9 +147,22 @@ def get_couples(family_tree_cell: FamilyTreeCell) -> list:
         association_couple.c.id_family_tree_cell_couple_1 == family_tree_cell.id_family_tree_cell,
         association_couple.c.id_family_tree_cell_couple_2 == family_tree_cell.id_family_tree_cell
     )).all()
-    couples = [couple[0] if couple[0] != family_tree_cell.id_family_tree_cell else couple[1] for couple in couples]
+    print("couples :", couples)
+    couples = [
+        {
+            "id_couple": couple[0],
+            "start_union": couple[2],
+            "end_union": couple[3]
+        } if couple[0] != family_tree_cell.id_family_tree_cell else {
+            "id_couple": couple[1],
+            "start_union": couple[2],
+            "end_union": couple[3]
+        } for couple in couples
+    ]
     return [
         family_tree_cell_schema.dump(
-            FamilyTreeCell.query.filter_by(id_family_tree_cell=couple).first_or_404())
+            FamilyTreeCell.query.filter_by(id_family_tree_cell=couple["id_couple"]).first_or_404()
+        ) | {"start_union": couple["start_union"], "end_union": couple["end_union"]}
+
         for couple in couples
     ]
