@@ -26,24 +26,6 @@ class FamilyTreeCellSchema(ma.Schema):
 family_tree_cell_schema = FamilyTreeCellSchema()
 
 
-class FamilyTreeCellCoupleSchema(ma.Schema):
-    class Meta:
-        fields = (
-            "id_family_tree_cell",
-            "name",
-            "surnames",
-            "birthday",
-            "jobs",
-            "comments",
-            "id_family_tree",
-            "start_union",
-            "end_union"
-        )
-
-
-family_tree_cell_couple_schema = FamilyTreeCellCoupleSchema()
-
-
 class PictureSchema(ma.Schema):
     class Meta:
         fields = ("id_picture", "picture_date", "comments", "id_family_tree_cell")

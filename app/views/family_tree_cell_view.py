@@ -3,7 +3,7 @@ from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child, association_couple
-from ..schemas import family_tree_cell_schema, picture_schema, family_tree_cell_couple_schema
+from ..schemas import family_tree_cell_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
 from app import db
 from sqlalchemy import or_
