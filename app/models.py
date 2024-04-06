@@ -206,6 +206,17 @@ def init_db():
     family_tree_1.family_tree_cells.append(family_tree_cell_7)
     family_tree_1.family_tree_cells.append(family_tree_cell_8)
     user_1.family_trees.append(family_tree_1)
+
+    # determination of x and y
+    # sort by birthday
+    # Loop on family_tree_cells :
+    # 1er enregistrement, on détermine x par rapport aux nombres d'enfants
+    # Si enfant, x est relatif par rapport au x du parent
+    # Si 2nd couple, x est relatif par rapport au 1er x du couple
+    # Vérifier si logique fonctionne, ensuite prévoir un tableau de remplissage : si position, on décale
+
+
+
     db.session.add(user_1)
 
     user_2 = User(name="Dalton", surname="Joe", email="joe.dalton@posteo.net", password="password2")
