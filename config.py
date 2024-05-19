@@ -1,5 +1,3 @@
-import os
+from os import environ
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-print('sqlite:///' + os.path.join(basedir, 'family-tree-flask.db'))
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'family-tree-flask.db')
+SQLALCHEMY_DATABASE_URI = environ.get('DB_URL')

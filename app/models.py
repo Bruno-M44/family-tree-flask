@@ -3,7 +3,6 @@ import logging as lg
 
 from app import db
 
-
 association_user_ft = db.Table(
     "association_user_ft",
     db.Column("id_user", db.Integer, db.ForeignKey("user.id_user", ondelete="CASCADE"), primary_key=True),

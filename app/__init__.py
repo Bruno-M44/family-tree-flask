@@ -21,13 +21,6 @@ def create_app():
     jwt.init_app(app)
     ma.init_app(app)
 
-    # Ensure FOREIGN KEY for sqlite3
-    def _fk_pragma_on_connect(dbapi_con, con_record):  # noqa
-        dbapi_con.execute('pragma foreign_keys=ON')
-
-    with app.app_context():
-        event.listen(db.engine, "connect", _fk_pragma_on_connect)
-
     from app.views.login_view import login_app
     from app.views.user_view import user_app
     from app.views.family_tree_view import family_tree_app
