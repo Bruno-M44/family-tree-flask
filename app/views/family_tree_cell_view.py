@@ -50,8 +50,10 @@ def create_family_tree_cell(id_family_tree: int):
         name=request.json.get("name"),
         surnames=request.json.get("surnames"),
         birthday=request.json.get("birthday"),
+        deathday=request.json.get("deathday"),
         jobs=request.json.get("jobs"),
-        comments=request.json.get("comments")
+        comments=request.json.get("comments"),
+        generation=request.json.get("generation")
     )
     for child in request.json.get("children"):
         new_family_tree_cell.parent.append(FamilyTreeCell.query.get(child))

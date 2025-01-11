@@ -20,7 +20,7 @@ family_trees_schema = FamilyTreeSchema(many=True)
 
 class FamilyTreeCellSchema(ma.Schema):
     class Meta:
-        fields = ("id_family_tree_cell", "name", "surnames", "birthday", "jobs", "comments", "id_family_tree")
+        fields = ("id_family_tree_cell", "name", "surnames", "birthday", "deathday", "jobs", "comments", "generation", "id_family_tree")
 
 
 family_tree_cell_schema = FamilyTreeCellSchema()
