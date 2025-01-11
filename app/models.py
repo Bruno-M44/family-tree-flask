@@ -82,6 +82,8 @@ class FamilyTreeCell(db.Model):
     birthday = db.Column(db.DateTime, nullable=False)
     jobs = db.Column(db.String, nullable=False)
     comments = db.Column(db.String, nullable=False)
+    deathday = db.Column(db.DateTime, nullable=True)
+    generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
     pictures = db.relationship("Picture", backref=db.backref("family_tree_cell", cascade='delete'))
     parent = db.relationship(
@@ -99,12 +101,14 @@ class FamilyTreeCell(db.Model):
         backref=db.backref("couples")
     )
 
-    def __init__(self, name: str, surnames: str, birthday: str, jobs: str, comments: str):
+    def __init__(self, name: str, surnames: str, birthday: str, jobs: str, comments: str, generation: int, deathday: str = None):
         self.name = name
         self.surnames = surnames
         self.birthday = datetime.strptime(birthday, "%d/%m/%Y")
+        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else deathday
         self.jobs = jobs
         self.comments = comments
+        self.generation = generation
 
 
 class Picture(db.Model):
@@ -129,56 +133,67 @@ def init_db():
         surnames="John, Johnny",
         birthday="14/07/1983",
         jobs="engineer",
-        comments="my father"
+        comments="my father",
+        generation=1
     )
     family_tree_cell_2 = FamilyTreeCell(
         name="Smith",
         surnames="Jimmy",
         birthday="17/09/1999",
         jobs="fireman",
-        comments="son"
+        comments="son",
+        generation=2
     )
     family_tree_cell_3 = FamilyTreeCell(
         name="Smith",
         surnames="Sarah",
         birthday="12/02/2002",
         jobs="director",
-        comments="daughter"
+        comments="daughter",
+        generation=2
     )
     family_tree_cell_4 = FamilyTreeCell(
         name="Jackson",
         surnames="Bob",
-        birthday="05/10/1961",
+        birthday="05/10/1945",
+        deathday="15/06/2012",
         jobs="factory worker",
-        comments="grand father"
+        comments="grand father",
+        generation=0
     )
     family_tree_cell_5 = FamilyTreeCell(
         name="Smith",
         surnames="Franklin",
-        birthday="30/09/1956",
+        birthday="30/09/1940",
+        deathday="15/06/2003",
         jobs="soldier",
-        comments="grand father"
+        comments="grand father",
+        generation=0
     )
     family_tree_cell_6 = FamilyTreeCell(
         name="Roosvelt",
         surnames="Amanda",
-        birthday="25/12/1957",
+        birthday="25/12/1950",
         jobs="secretary",
-        comments="grand mother"
+        comments="grand mother",
+        generation=0
     )
     family_tree_cell_7 = FamilyTreeCell(
         name="Gallagher",
         surnames="Shannon",
-        birthday="04/02/1962",
+        birthday="04/02/1942",
+        deathday="12/03/2015",
         jobs="housewife",
-        comments="grand mother"
+        comments="grand mother",
+        generation=0
     )
     family_tree_cell_8 = FamilyTreeCell(
         name="Lockler",
         surnames="Roseanne",
         birthday="05/05/1980",
         jobs="hairdresser",
-        comments="mother"
+        comments="mother",
+        generation=1
     )
     picture_1 = Picture(
         picture_date="04/10/1990",

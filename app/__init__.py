@@ -4,6 +4,7 @@ from sqlalchemy import event
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
 from flask_cors import CORS
+from datetime import timedelta
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -14,6 +15,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object("config")
     app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1) # TODO : to review
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(hours=1)
     # app.config['APPLICATION_ROOT'] = '/views'
 
     CORS(app)
