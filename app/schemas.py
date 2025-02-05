@@ -28,7 +28,7 @@ family_tree_cell_schema = FamilyTreeCellSchema()
 
 class PictureSchema(ma.Schema):
     class Meta:
-        fields = ("id_picture", "picture_date", "comments", "id_family_tree_cell")
+        fields = ("id_picture", "filename", "picture_date", "comments", "header_picture", "id_family_tree_cell")
 
 
 picture_schema = PictureSchema()

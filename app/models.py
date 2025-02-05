@@ -114,13 +114,17 @@ class FamilyTreeCell(db.Model):
 class Picture(db.Model):
     # query: db.Query  # autocomplete
     id_picture = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String, nullable=False)
     picture_date = db.Column(db.DateTime, nullable=False)
     comments = db.Column(db.String, nullable=False)
+    header_picture = db.Column(db.Boolean, default=False)
     id_family_tree_cell = db.Column(db.ForeignKey("family_tree_cell.id_family_tree_cell", ondelete="CASCADE"))
 
-    def __init__(self, picture_date, comments):
+    def __init__(self, filename: str, picture_date: str, comments: str, header_picture: str):
+        self.filename = filename
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
         self.comments = comments
+        self.header_picture = eval(header_picture)
 
 
 def init_db():
@@ -195,11 +199,6 @@ def init_db():
         comments="mother",
         generation=1
     )
-    picture_1 = Picture(
-        picture_date="04/10/1990",
-        comments="7 years"
-    )
-    family_tree_cell_1.pictures.append(picture_1)
     family_tree_cell_1.parent.append(family_tree_cell_2)
     family_tree_cell_1.parent.append(family_tree_cell_3)
     family_tree_cell_8.parent.append(family_tree_cell_2)
