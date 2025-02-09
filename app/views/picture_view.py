@@ -1,6 +1,6 @@
 import os
 import werkzeug.exceptions
-from flask import jsonify, make_response, request, Blueprint, current_app
+from flask import jsonify, make_response, request, Blueprint, current_app, send_from_directory
 from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTreeCell, Picture
@@ -52,13 +52,13 @@ def create_picture(id_family_tree_cell: int):
 
 
 @picture_app.route(
-    "/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
-    methods=["GET", "PUT", "DELETE"],
-    endpoint="get_update_delete_picture"
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
+    methods=["GET", "PUT"],
+    endpoint="get_update_picture"
 )
 @jwt_required()
 @VerifyUserAuthorized
-def get_update_delete_picture(id_family_tree_cell: int, id_picture: int):
+def get_update_delete_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: int):
     try:
         picture = Picture.query.filter_by(
             id_family_tree_cell=id_family_tree_cell,
@@ -77,6 +77,7 @@ def get_update_delete_picture(id_family_tree_cell: int, id_picture: int):
             "status": 200,
             "data": result
         }
+
         return make_response(jsonify(data), data["status"])
 
     if request.method == "PUT":
@@ -103,6 +104,64 @@ def get_update_delete_picture(id_family_tree_cell: int, id_picture: int):
         }
         return make_response(jsonify(data), data["status"])
 
+@picture_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>/download",
+    methods=["GET"],
+    endpoint="download_picture"
+)
+@jwt_required()
+@VerifyUserAuthorized
+def download_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: int):
+    try:
+        picture = Picture.query.filter_by(
+            id_family_tree_cell=id_family_tree_cell,
+            id_picture=id_picture).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        data = {
+            "message": "Bad family tree cell or picture",
+            "status": 404,
+        }
+        return make_response(jsonify(data), data["status"])
+
+    if request.method == "GET":
+        result = picture_schema.dump(picture)
+
+        return send_from_directory(
+            directory=f"/pictures/{id_family_tree}/{id_family_tree_cell}",
+            path=result["filename"],
+            as_attachment=True
+            )
+
+@picture_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>/delete",
+    methods=["DELETE"],
+    endpoint="delete_picture"
+)
+@jwt_required()
+@VerifyUserAuthorized
+def delete_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: int):
+    try:
+        picture = Picture.query.filter_by(
+            id_family_tree_cell=id_family_tree_cell,
+            id_picture=id_picture).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        data = {
+            "message": "Bad family tree cell or picture",
+            "status": 404,
+        }
+        return make_response(jsonify(data), data["status"])
+
+    if request.method == "DELETE":
+        os.remove(f"/pictures/{id_family_tree}/{id_family_tree_cell}/{picture.filename}")
+        db.session.delete(picture)
+        db.session.commit()
+        result = picture_schema.dump(picture)
+        data = {
+            "message": "Picture Deleted !",
+            "status": 200,
+            "data": result
+        }
+        return make_response(jsonify(data), data["status"])
 
 @picture_app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="upload_picture")
 @jwt_required()
