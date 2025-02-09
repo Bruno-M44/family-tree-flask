@@ -52,7 +52,7 @@ class User(db.Model):
     family_trees = db.relationship(
         "FamilyTree",
         secondary=association_user_ft,
-        backref=db.backref("user", cascade='delete')
+        backref=db.backref("user")
     )
 
     def __init__(self, name, surname, email, password):
@@ -85,7 +85,7 @@ class FamilyTreeCell(db.Model):
     deathday = db.Column(db.DateTime, nullable=True)
     generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
-    pictures = db.relationship("Picture", backref=db.backref("family_tree_cell", cascade='delete'))
+    pictures = db.relationship("Picture", backref=db.backref("family_tree_cell"))
     parent = db.relationship(
         "FamilyTreeCell",
         secondary="association_parent_child",
