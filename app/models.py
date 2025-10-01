@@ -105,7 +105,7 @@ class FamilyTreeCell(db.Model):
         self.name = name
         self.surnames = surnames
         self.birthday = datetime.strptime(birthday, "%d/%m/%Y")
-        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else deathday
+        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else None
         self.jobs = jobs
         self.comments = comments
         self.generation = generation
@@ -124,7 +124,7 @@ class Picture(db.Model):
         self.filename = filename
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
         self.comments = comments
-        self.header_picture = eval(header_picture)
+        self.header_picture = eval(header_picture.capitalize())
 
 
 def init_db():

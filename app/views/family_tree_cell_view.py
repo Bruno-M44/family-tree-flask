@@ -1,12 +1,13 @@
+from datetime import datetime
 import werkzeug.exceptions
-from flask import jsonify, make_response, request, Blueprint
+from flask import jsonify, make_response, request, Blueprint, current_app
 from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child, association_couple
 from ..schemas import family_tree_cell_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
 from app import db
-from sqlalchemy import or_
+from sqlalchemy import select, or_
 
 
 family_tree_cell_app = Blueprint("family_tree_cell_app", __name__)
@@ -27,6 +28,7 @@ def get_family_tree_cells(id_family_tree: int):
         family_tree_cell_result = family_tree_cell_schema.dump(family_tree_cell)
         family_tree_cell_result["children"] = get_children(family_tree_cell=family_tree_cell)
         family_tree_cell_result["couples"] = get_couples(family_tree_cell=family_tree_cell)
+        family_tree_cell_result["orphan"] = identify_orphan(family_tree_cell=family_tree_cell)
         result.append(family_tree_cell_result)
 
     data = {
@@ -61,6 +63,13 @@ def create_family_tree_cell(id_family_tree: int):
     for parent in request.json.get("parents"):
         family_tree_cell_parent = FamilyTreeCell.query.get(parent)
         family_tree_cell_parent.parent.append(new_family_tree_cell)
+
+    for couple in request.json.get("couples"):
+        family_tree_cell_couple = FamilyTreeCell.query.get(couple)
+        # family_tree_cell_couple.couple.append(new_family_tree_cell)
+        new_family_tree_cell.couple.append(family_tree_cell_couple)
+        # family_tree_cell_couple.couple.append(FamilyTreeCell.query.get(couple))
+
 
     family_tree.family_tree_cells.append(new_family_tree_cell)
 
@@ -97,6 +106,7 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
         result = family_tree_cell_schema.dump(family_tree_cell)
         result["children"] = get_children(family_tree_cell=family_tree_cell)
         result["couples"] = get_couples(family_tree_cell=family_tree_cell)
+        result["orphan"] = identify_orphan(family_tree_cell=family_tree_cell)
 
         data = {
             "message": "Family Tree Cell Info !",
@@ -106,11 +116,29 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
         return make_response(jsonify(data), data["status"])
 
     if request.method == "PUT":
+        # family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
         for key, value in request.get_json().items():
-            family_tree_cell.__setattr__(key, value)
+            if key == "birthday":
+                family_tree_cell.birthday = datetime.strptime(value, "%d/%m/%Y")
+            elif key == "deathday":
+                family_tree_cell.deathday = datetime.strptime(value, "%d/%m/%Y")
+            else:
+                setattr(family_tree_cell, key, value)
+        # TODO:  A rendre opérationnel
+        # for child in request.json.get("children"):
+        #     family_tree_cell.parent.append(FamilyTreeCell.query.get(child))
+
+        # for parent in request.json.get("parents"):
+        #     family_tree_cell_parent = FamilyTreeCell.query.get(parent)
+        #     family_tree_cell_parent.parent.append(family_tree_cell)
+
+        # for couple in request.json.get("couples"):
+        #     family_tree_cell_couple = FamilyTreeCell.query.get(couple)
+        #     family_tree_cell.couple.append(family_tree_cell_couple)
 
         db.session.commit()
         result = family_tree_cell_schema.dump(family_tree_cell)
+
         data = {
             "message": "Family Tree Cell Modified !",
             "status": 204,
@@ -149,7 +177,6 @@ def get_couples(family_tree_cell: FamilyTreeCell) -> list:
         association_couple.c.id_family_tree_cell_couple_1 == family_tree_cell.id_family_tree_cell,
         association_couple.c.id_family_tree_cell_couple_2 == family_tree_cell.id_family_tree_cell
     )).all()
-    print("couples :", couples)
     couples = [
         {
             "id_couple": couple[0],
@@ -168,3 +195,11 @@ def get_couples(family_tree_cell: FamilyTreeCell) -> list:
 
         for couple in couples
     ]
+
+def identify_orphan(family_tree_cell: FamilyTreeCell) -> bool:
+    '''Identify if cell is orphan or not'''
+    if db.session.query(association_parent_child).filter(or_(
+        association_parent_child.c.id_family_tree_cell_child == family_tree_cell.id_family_tree_cell
+        )).first():
+        return False
+    return True
