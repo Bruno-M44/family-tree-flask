@@ -92,6 +92,11 @@ def get_update_delete_family_tree(id_family_tree: int):
         ).all()
         for picture in pictures_to_delete:
             db.session.delete(picture)
+        
+        cells_to_delete = FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).all()
+        for cell in cells_to_delete:
+            db.session.delete(cell)
+        
         FamilyTreeCell.query.filter_by(id_family_tree=id_family_tree).delete()
         db.session.delete(family_tree)
         db.session.commit()
@@ -101,4 +106,5 @@ def get_update_delete_family_tree(id_family_tree: int):
             "status": 200,
             "data": result
         }
+        
         return make_response(jsonify(data), data["status"])
