@@ -71,7 +71,7 @@ def update_user():
     current_user = get_jwt_identity()
     user = User.query.get(current_user)
     for key, value in request.get_json().items():
-        user.__setattr__(key, value)
+        setattr(user, key, value)
 
     db.session.commit()
     result = user_schema.dump(user)

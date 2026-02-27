@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+import logging
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import event
@@ -13,6 +15,10 @@ ma = Marshmallow()
 
 def create_app():
     app = Flask(__name__)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
     app.config.from_object("config")
     app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1) # TODO : to review
@@ -29,6 +35,8 @@ def create_app():
     from app.views.family_tree_view import family_tree_app
     from app.views.family_tree_cell_view import family_tree_cell_app
     from app.views.picture_view import picture_app
+    from app.views.pet_view import pet_app
+    from app.views.pet_picture_view import pet_picture_app
     from app.views.command import command_app
 
     app.register_blueprint(login_app)
@@ -36,6 +44,8 @@ def create_app():
     app.register_blueprint(family_tree_app)
     app.register_blueprint(family_tree_cell_app)
     app.register_blueprint(picture_app)
+    app.register_blueprint(pet_app)
+    app.register_blueprint(pet_picture_app)
     app.register_blueprint(command_app)
 
     return app

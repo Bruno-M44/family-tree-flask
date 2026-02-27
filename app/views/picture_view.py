@@ -1,6 +1,6 @@
 import os
 import werkzeug.exceptions
-from flask import jsonify, make_response, request, Blueprint, current_app, send_from_directory
+from flask import jsonify, make_response, request, Blueprint, send_from_directory
 from flask_jwt_extended import jwt_required
 
 from ..models import FamilyTreeCell, Picture
@@ -29,26 +29,25 @@ def get_pictures(id_family_tree_cell: int):
     return make_response(jsonify(data), data["status"])
 
 
-@picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
-@jwt_required()
-@VerifyUserAuthorized
-def create_picture(id_family_tree_cell: int):
-    family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
-    new_picture = Picture(
-        picture_date=request.json.get("picture_date"),
-        comments=request.json.get("comments"),
-        
-    )
-    family_tree_cell.pictures.append(new_picture)
-    db.session.commit()
+# @picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
+# @jwt_required()
+# @VerifyUserAuthorized
+# def create_picture(id_family_tree_cell: int):
+#     family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
+#     new_picture = Picture(
+#         picture_date=request.json.get("picture_date"),
+#         comments=request.json.get("comments")
+#     )
+#     family_tree_cell.pictures.append(new_picture)
+#     db.session.commit()
 
-    result = picture_schema.dump(new_picture)
-    data = {
-        "message": "Picture Created !",
-        "status": 201,
-        "data": result
-    }
-    return make_response(jsonify(data), data["status"])
+#     result = picture_schema.dump(new_picture)
+#     data = {
+#         "message": "Picture Created !",
+#         "status": 201,
+#         "data": result
+#     }
+#     return make_response(jsonify(data), data["status"])
 
 
 @picture_app.route(
@@ -82,7 +81,7 @@ def get_update_delete_picture(id_family_tree: int, id_family_tree_cell: int, id_
 
     if request.method == "PUT":
         for key, value in request.get_json().items():
-            picture.__setattr__(key, value)
+            setattr(picture, key, value)
 
         db.session.commit()
         result = picture_schema.dump(picture)

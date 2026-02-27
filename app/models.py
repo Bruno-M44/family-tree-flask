@@ -1,11 +1,16 @@
+#! /usr/bin/env python
+"""Module providing the application models."""
+
 from datetime import datetime
 import logging as lg
+from ast import literal_eval
 
 from app import db
 
 association_user_ft = db.Table(
     "association_user_ft",
-    db.Column("id_user", db.Integer, db.ForeignKey("user.id_user", ondelete="CASCADE"), primary_key=True),
+    db.Column("id_user", db.Integer, db.ForeignKey(
+        "user.id_user", ondelete="CASCADE"), primary_key=True),
     db.Column("id_family_tree", db.Integer, db.ForeignKey(
         "family_tree.id_family_tree", ondelete="CASCADE"), primary_key=True),
     db.Column("permission", db.String, nullable=False, default="view")
@@ -43,6 +48,7 @@ association_couple = db.Table(
 
 
 class User(db.Model):
+    """user model"""
     # query: db.Query  # autocomplete
     id_user = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -63,6 +69,7 @@ class User(db.Model):
 
 
 class FamilyTree(db.Model):
+    """family_tree model"""
     # query: db.Query  # autocomplete
     id_family_tree = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
@@ -75,6 +82,7 @@ class FamilyTree(db.Model):
 
 
 class FamilyTreeCell(db.Model):
+    """family_tree_cell model"""
     # query: db.Query  # autocomplete
     id_family_tree_cell = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -86,22 +94,43 @@ class FamilyTreeCell(db.Model):
     generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
     pictures = db.relationship("Picture", backref=db.backref("family_tree_cell"))
+    pets = db.relationship("Pet", backref=db.backref("family_tree_cell"))
     parent = db.relationship(
         "FamilyTreeCell",
         secondary="association_parent_child",
-        primaryjoin="association_parent_child.c.id_family_tree_cell_parent == FamilyTreeCell.id_family_tree_cell",
-        secondaryjoin="association_parent_child.c.id_family_tree_cell_child == FamilyTreeCell.id_family_tree_cell",
+        primaryjoin=(
+            "association_parent_child.c.id_family_tree_cell_parent == "
+            "FamilyTreeCell.id_family_tree_cell"),
+        secondaryjoin=(
+            "association_parent_child.c.id_family_tree_cell_child == "
+            "FamilyTreeCell.id_family_tree_cell"
+        ),
         backref=db.backref("parents")
     )
     couple = db.relationship(
         "FamilyTreeCell",
         secondary="association_couple",
-        primaryjoin="association_couple.c.id_family_tree_cell_couple_1 == FamilyTreeCell.id_family_tree_cell",
-        secondaryjoin="association_couple.c.id_family_tree_cell_couple_2 == FamilyTreeCell.id_family_tree_cell",
+        primaryjoin=(
+            "association_couple.c.id_family_tree_cell_couple_1 == "
+            "FamilyTreeCell.id_family_tree_cell"
+        ),
+        secondaryjoin=(
+            "association_couple.c.id_family_tree_cell_couple_2 == "
+            "FamilyTreeCell.id_family_tree_cell"
+        ),
         backref=db.backref("couples")
     )
 
-    def __init__(self, name: str, surnames: str, birthday: str, jobs: str, comments: str, generation: int, deathday: str = None):
+    def __init__(
+        self,
+        name: str,
+        surnames: str,
+        birthday: str,
+        jobs: str,
+        comments: str,
+        generation: int,
+        deathday: str = None
+        ):
         self.name = name
         self.surnames = surnames
         self.birthday = datetime.strptime(birthday, "%d/%m/%Y")
@@ -112,22 +141,72 @@ class FamilyTreeCell(db.Model):
 
 
 class Picture(db.Model):
+    """picture model"""
     # query: db.Query  # autocomplete
     id_picture = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String, nullable=False)
     picture_date = db.Column(db.DateTime, nullable=False)
     comments = db.Column(db.String, nullable=False)
     header_picture = db.Column(db.Boolean, default=False)
-    id_family_tree_cell = db.Column(db.ForeignKey("family_tree_cell.id_family_tree_cell", ondelete="CASCADE"))
+    id_family_tree_cell = db.Column(
+        db.ForeignKey("family_tree_cell.id_family_tree_cell", ondelete="CASCADE"))
 
     def __init__(self, filename: str, picture_date: str, comments: str, header_picture: str):
         self.filename = filename
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
         self.comments = comments
-        self.header_picture = eval(header_picture.capitalize())
+        self.header_picture = literal_eval(header_picture.capitalize())
+
+
+class Pet(db.Model):
+    """pet model"""
+    # query: db.Query  # autocomplete
+    id_pet = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    species = db.Column(db.String, nullable=False)
+    birthday = db.Column(db.DateTime, nullable=True)
+    deathday = db.Column(db.DateTime, nullable=True)
+    comments = db.Column(db.String, nullable=True)
+    id_family_tree_cell = db.Column(
+        db.ForeignKey("family_tree_cell.id_family_tree_cell", ondelete="CASCADE"))
+    pets_pictures = db.relationship("PetPicture", backref=db.backref("pet"))
+
+    def __init__(self, name: str, species: str, birthday: str, deathday: str, comments: str):
+        self.name = name
+        self.species = species
+        self.birthday = datetime.strptime(birthday, "%d/%m/%Y") if birthday else None
+        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else None
+        self.comments = comments
+
+
+class PetPicture(db.Model):
+    """pet_picture model"""
+    # query: db.Query  # autocomplete
+    id_pet_picture = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String, nullable=False)
+    picture_date = db.Column(db.DateTime, nullable=True)
+    comments = db.Column(db.String, nullable=True)
+    id_pet = db.Column(
+        db.ForeignKey("pet.id_pet", ondelete="CASCADE"))
+
+    def __init__(self, filename: str, picture_date: str, comments: str):
+        self.filename = filename
+        self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y") if picture_date else None
+        self.comments = comments
+
+
+def create_all():
+    '''Create tables that do not exist'''
+    db.create_all()
+
+
+def drop_table(table: str):
+    '''Drop specific table'''
+    db.metadata.tables[table].drop(db.engine, checkfirst=True)
 
 
 def init_db():
+    '''Drop and create DB with a few records'''
     db.drop_all()
     db.create_all()
     user_1 = User(name="Smith", surname="John", email="john.smith@gmail.com", password="password1")
@@ -226,7 +305,8 @@ def init_db():
     # 1er enregistrement, on détermine x par rapport aux nombres d'enfants
     # Si enfant, x est relatif par rapport au x du parent
     # Si 2nd couple, x est relatif par rapport au 1er x du couple
-    # Vérifier si logique fonctionne, ensuite prévoir un tableau de remplissage : si position, on décale
+    # Vérifier si logique fonctionne, ensuite prévoir un tableau de remplissage :
+    #  si position, on décale
 
 
 
