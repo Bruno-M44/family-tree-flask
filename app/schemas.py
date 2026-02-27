@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 from app import ma
 
 
@@ -33,3 +34,21 @@ class PictureSchema(ma.Schema):
 
 picture_schema = PictureSchema()
 pictures_schema = PictureSchema(many=True)
+
+
+class PetSchema(ma.Schema):
+    class Meta:
+        fields = ("id_pet", "name", "species", "birthday", "deathday", "comments", "id_family_tree_cell")
+
+
+pet_schema = PetSchema()
+pets_schema = PetSchema(many=True)
+
+
+class PetPictureSchema(ma.Schema):
+    class Meta:
+        fields = ("id_pet_picture", "filename", "picture_date", "comments", "id_pet")
+
+
+pet_picture_schema = PetPictureSchema()
+pets_pictures_schema = PetPictureSchema(many=True)

@@ -74,7 +74,7 @@ def get_update_delete_family_tree(id_family_tree: int):
     if request.method == "PUT":
         family_tree = FamilyTree.query.get(id_family_tree)
         for key, value in request.get_json().items():
-            family_tree.__setattr__(key, value)
+            setattr(family_tree, key, value)
 
         db.session.commit()
         result = family_tree_schema.dump(family_tree)
