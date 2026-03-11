@@ -1,0 +1,10 @@
+services:
+  flask_app:
+    ports:
+      - "4000:4000"  # Expose le port 4000 en local
+    volumes:
+      - ./:/app      # Monte le code local pour le développement à chaud
+
+  flask_db:
+    ports:
+      - "5432:5432"  # Expose le port 5432 en local (optionnel)
