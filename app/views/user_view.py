@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..models import User, FamilyTree, association_user_ft, FamilyTreeCell, Picture
 from ..schemas import user_schema, family_tree_schema
+from ..demo.creator import create_demo_family_tree
 from app import db
 
 
@@ -49,6 +50,8 @@ def create_user():
             password=request.json.get("password")
         )
         db.session.add(new_user)
+        db.session.flush()
+        create_demo_family_tree(new_user)
         db.session.commit()
         result = user_schema.dump(new_user)
         data = {
