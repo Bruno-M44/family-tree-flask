@@ -39,4 +39,5 @@ jobs:
           script: |
             cd /home/ubuntu/family-tree-flask
             git pull origin main
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" > .env
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build flask_app
