@@ -4,7 +4,7 @@ services:
     # image: dockerhub-flask_live_app:1.0.0
     build: .
     environment:
-      - DB_URL=postgresql://postgres:postgres@flask_db:5432/postgres
+      - DB_URL=postgresql+psycopg://postgres:postgres@flask_db:5432/postgres
     depends_on:
       - flask_db
     volumes:

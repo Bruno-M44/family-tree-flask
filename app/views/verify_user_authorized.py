@@ -11,7 +11,7 @@ class VerifyUserAuthorized:
         self.func = own_function
 
     def __call__(self, *args, **kwargs):
-        current_user = get_jwt_identity()
+        current_user = int(get_jwt_identity())
         try:
             if not kwargs.get("id_family_tree"):
                 if not kwargs.get("id_family_tree_cell"):
@@ -36,7 +36,7 @@ class VerifyUserAuthorized:
         except werkzeug.exceptions.NotFound:
             data = {
                 "message": "User not authorized !",
-                "status": 404,
+                "status": 403,
             }
             return make_response(jsonify(data), data["status"])
         return self.func(*args, **kwargs)

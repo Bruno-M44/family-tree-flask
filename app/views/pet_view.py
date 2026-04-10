@@ -1,14 +1,13 @@
 #! /usr/bin/env python
 '''Endpoint restitution for pet'''
 import werkzeug.exceptions
+from datetime import datetime
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required
 from app import db
 from ..models import FamilyTreeCell, Pet
 from ..schemas import pets_schema, pet_schema
 from .verify_user_authorized import VerifyUserAuthorized
-
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 pet_app = Blueprint("pet_app", __name__)
 
@@ -41,16 +40,30 @@ def get_pets(id_family_tree_cell: int):
 @VerifyUserAuthorized
 def create_pet(id_family_tree_cell: int):
     '''create_pet endpoint'''
-    family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
-    new_pet = Pet(
-        name=request.json.get("name"),
-        species=request.json.get("species"),
-        birthday=request.json.get("birthday"),
-        deathday=request.json.get("deathday"),
-        comments=request.json.get("comments")
-    )
+    body = request.get_json() or {}
+    required = ['name', 'species']
+    missing = [f for f in required if not body.get(f)]
+    if missing:
+        return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
+
+    try:
+        new_pet = Pet(
+            name=body['name'],
+            species=body['species'],
+            birthday=body.get('birthday'),
+            deathday=body.get('deathday'),
+            comments=body.get('comments')
+        )
+    except ValueError:
+        return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
+
+    family_tree_cell = db.session.get(FamilyTreeCell, id_family_tree_cell)
     family_tree_cell.pets.append(new_pet)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
 
     result = pet_schema.dump(new_pet)
     data = {
@@ -92,21 +105,41 @@ def get_update_delete_pet(id_family_tree_cell: int, id_pet: int):
         return make_response(jsonify(data), data["status"])
 
     if request.method == "PUT":
-        for key, value in request.get_json().items():
-            setattr(pet, key, value)
+        data = request.get_json() or {}
+        if 'name' in data:
+            pet.name = data['name']
+        if 'species' in data:
+            pet.species = data['species']
+        if 'comments' in data:
+            pet.comments = data['comments']
+        try:
+            if 'birthday' in data:
+                pet.birthday = datetime.strptime(data['birthday'], "%d/%m/%Y") if data['birthday'] else None
+            if 'deathday' in data:
+                pet.deathday = datetime.strptime(data['deathday'], "%d/%m/%Y") if data['deathday'] else None
+        except ValueError:
+            return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
         result = pet_schema.dump(pet)
         data = {
             "message": "Pet Modified !",
-            "status": 204,
+            "status": 200,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
 
     if request.method == "DELETE":
         db.session.delete(pet)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
         result = pet_schema.dump(pet)
         data = {
             "message": "Pet Deleted !",

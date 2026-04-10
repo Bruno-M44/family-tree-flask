@@ -3,8 +3,8 @@
 
 from datetime import datetime
 import logging as lg
-from ast import literal_eval
 
+from werkzeug.security import generate_password_hash
 from app import db
 
 association_user_ft = db.Table(
@@ -53,7 +53,7 @@ class User(db.Model):
     id_user = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     surname = db.Column(db.String, nullable=False)
-    email = db.Column(db.String, nullable=False)
+    email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
     family_trees = db.relationship(
         "FamilyTree",
@@ -65,7 +65,7 @@ class User(db.Model):
         self.name = name
         self.surname = surname
         self.email = email
-        self.password = password
+        self.password = generate_password_hash(password)
 
 
 class FamilyTree(db.Model):
@@ -155,7 +155,7 @@ class Picture(db.Model):
         self.filename = filename
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
         self.comments = comments
-        self.header_picture = literal_eval(header_picture.capitalize())
+        self.header_picture = str(header_picture).strip().lower() == 'true'
 
 
 class Pet(db.Model):

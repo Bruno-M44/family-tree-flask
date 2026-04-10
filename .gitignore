@@ -1,4 +1,5 @@
 env/
+venv/
 *.pyc
 __pycache__
 geckodriver.log
@@ -11,3 +12,6 @@ geckodriver.log
 /.idea/workspace.xml
 /.idea/conventionalCommit.xml
 pictures/
+pet_pictures/
+.env
+*.db

@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import logging
+from os import environ
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import event
@@ -13,19 +14,23 @@ jwt = JWTManager()
 ma = Marshmallow()
 
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
     app.config.from_object("config")
-    app.config["JWT_SECRET_KEY"] = "F6*99s5*y*v6a45oyN#b$%ipWe"
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1) # TODO : to review
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(hours=1)
-    # app.config['APPLICATION_ROOT'] = '/views'
 
-    CORS(app)
+    if test_config:
+        app.config.update(test_config)
+        app.config.pop('SQLALCHEMY_ENGINE_OPTIONS', None)
+
+    CORS(app,
+         origins=environ.get('CORS_ORIGINS', '*'),
+         allow_headers=['Authorization', 'Content-Type'])
     db.init_app(app)
     jwt.init_app(app)
     ma.init_app(app)

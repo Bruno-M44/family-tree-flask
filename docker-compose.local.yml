@@ -4,6 +4,8 @@ services:
       - "4000:4000"  # Expose le port 4000 en local
     volumes:
       - ./:/app      # Monte le code local pour le développement à chaud
+    environment:
+      - CORS_ORIGINS=http://localhost:5173
 
   flask_db:
     ports:

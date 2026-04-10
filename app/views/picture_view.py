@@ -1,16 +1,17 @@
 import os
+import uuid
 import werkzeug.exceptions
+from datetime import datetime
 from flask import jsonify, make_response, request, Blueprint, send_from_directory, send_file
 from flask_jwt_extended import jwt_required
+from werkzeug.utils import secure_filename
 
 from ..models import FamilyTreeCell, Picture
 from ..schemas import pictures_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
+from .utils import allowed_file
 from app import db
-from werkzeug.utils import secure_filename
-import uuid
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 picture_app = Blueprint("picture_app", __name__)
 
@@ -29,27 +30,6 @@ def get_pictures(id_family_tree_cell: int):
     return make_response(jsonify(data), data["status"])
 
 
-# @picture_app.route("/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="create_picture")
-# @jwt_required()
-# @VerifyUserAuthorized
-# def create_picture(id_family_tree_cell: int):
-#     family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)
-#     new_picture = Picture(
-#         picture_date=request.json.get("picture_date"),
-#         comments=request.json.get("comments")
-#     )
-#     family_tree_cell.pictures.append(new_picture)
-#     db.session.commit()
-
-#     result = picture_schema.dump(new_picture)
-#     data = {
-#         "message": "Picture Created !",
-#         "status": 201,
-#         "data": result
-#     }
-#     return make_response(jsonify(data), data["status"])
-
-
 @picture_app.route(
     "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>",
     methods=["GET", "PUT"],
@@ -57,7 +37,7 @@ def get_pictures(id_family_tree_cell: int):
 )
 @jwt_required()
 @VerifyUserAuthorized
-def get_update_delete_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: int):
+def get_update_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: int):
     try:
         picture = Picture.query.filter_by(
             id_family_tree_cell=id_family_tree_cell,
@@ -76,32 +56,33 @@ def get_update_delete_picture(id_family_tree: int, id_family_tree_cell: int, id_
             "status": 200,
             "data": result
         }
-
         return make_response(jsonify(data), data["status"])
 
     if request.method == "PUT":
-        for key, value in request.get_json().items():
-            setattr(picture, key, value)
+        data = request.get_json() or {}
+        if 'comments' in data:
+            picture.comments = data['comments']
+        if 'header_picture' in data:
+            picture.header_picture = bool(data['header_picture'])
+        try:
+            if 'picture_date' in data:
+                picture.picture_date = datetime.strptime(data['picture_date'], "%d/%m/%Y") if data['picture_date'] else None
+        except ValueError:
+            return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
         result = picture_schema.dump(picture)
         data = {
             "message": "Picture Modified !",
-            "status": 204,
-            "data": result
-        }
-        return make_response(jsonify(data), data["status"])
-
-    if request.method == "DELETE":
-        db.session.delete(picture)
-        db.session.commit()
-        result = picture_schema.dump(picture)
-        data = {
-            "message": "Picture Deleted !",
             "status": 200,
             "data": result
         }
         return make_response(jsonify(data), data["status"])
+
 
 @picture_app.route(
     "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>/download",
@@ -122,14 +103,13 @@ def download_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: 
         }
         return make_response(jsonify(data), data["status"])
 
-    if request.method == "GET":
-        result = picture_schema.dump(picture)
+    result = picture_schema.dump(picture)
+    return send_from_directory(
+        directory=f"/pictures/{id_family_tree}/{id_family_tree_cell}",
+        path=result["filename"],
+        as_attachment=False
+    )
 
-        return send_from_directory(
-            directory=f"/pictures/{id_family_tree}/{id_family_tree_cell}",
-            path=result["filename"],
-            as_attachment=False
-            )
 
 @picture_app.route(
     "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures/<int:id_picture>/secure",
@@ -144,7 +124,6 @@ def secure_picture(id_family_tree, id_family_tree_cell, id_picture):
     ).first_or_404()
 
     filepath = f"/pictures/{id_family_tree}/{id_family_tree_cell}/{picture.filename}"
-
     return send_file(filepath, mimetype="image/jpeg")
 
 
@@ -167,59 +146,67 @@ def delete_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: in
         }
         return make_response(jsonify(data), data["status"])
 
-    if request.method == "DELETE":
+    try:
         os.remove(f"/pictures/{id_family_tree}/{id_family_tree_cell}/{picture.filename}")
-        db.session.delete(picture)
-        db.session.commit()
-        result = picture_schema.dump(picture)
-        data = {
-            "message": "Picture Deleted !",
-            "status": 200,
-            "data": result
-        }
-        return make_response(jsonify(data), data["status"])
+    except FileNotFoundError:
+        pass
+    db.session.delete(picture)
+    db.session.commit()
+    result = picture_schema.dump(picture)
+    data = {
+        "message": "Picture Deleted !",
+        "status": 200,
+        "data": result
+    }
+    return make_response(jsonify(data), data["status"])
 
-@picture_app.route("/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures", methods=["POST"], endpoint="upload_picture")
+
+@picture_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/pictures",
+    methods=["POST"],
+    endpoint="upload_picture"
+)
 @jwt_required()
 @VerifyUserAuthorized
 def upload_picture(id_family_tree: int, id_family_tree_cell: int):
     if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+        return make_response(jsonify({"message": "No file part", "status": 400}), 400)
 
     file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
 
-    # current_app.logger.info("---allowed_file(file.filename): %s", allowed_file(file.filename))
-    if file and allowed_file(file.filename):
-    # Générer un nom de fichier unique
-        filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
-        filename = secure_filename(filename)
-        
-        os.makedirs(f"/pictures/{id_family_tree}/{id_family_tree_cell}", exist_ok=True)
-        file.save(f"/pictures/{id_family_tree}/{id_family_tree_cell}/{filename}")
-        
-        family_tree_cell = FamilyTreeCell.query.get(id_family_tree_cell)     
-        new_picture = Picture(
-            filename=filename,
-            picture_date=request.form["picture_date"],
-            comments=request.form["comments"],
-            header_picture=request.form["header_picture"]
-        )
-        family_tree_cell.pictures.append(new_picture)
+    if file.filename == '':
+        return make_response(jsonify({"message": "No selected file", "status": 400}), 400)
+
+    if not (file and allowed_file(file.filename)):
+        return make_response(jsonify({"message": "File not allowed", "status": 400}), 400)
+
+    required_fields = ['picture_date', 'comments', 'header_picture']
+    missing = [f for f in required_fields if f not in request.form]
+    if missing:
+        return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
+
+    filename = secure_filename(str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower())
+    os.makedirs(f"/pictures/{id_family_tree}/{id_family_tree_cell}", exist_ok=True)
+    file.save(f"/pictures/{id_family_tree}/{id_family_tree_cell}/{filename}")
+
+    family_tree_cell = db.session.get(FamilyTreeCell, id_family_tree_cell)
+    new_picture = Picture(
+        filename=filename,
+        picture_date=request.form["picture_date"],
+        comments=request.form["comments"],
+        header_picture=request.form["header_picture"]
+    )
+    family_tree_cell.pictures.append(new_picture)
+    try:
         db.session.commit()
-        result = picture_schema.dump(new_picture)
-        
-    else:
-        return jsonify({"error": "File not allowed"}), 400
-             
+    except Exception:
+        db.session.rollback()
+        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+    result = picture_schema.dump(new_picture)
+
     data = {
-    "message": "Picture Created !",
-    "status": 201,
-    "data": result
+        "message": "Picture Created !",
+        "status": 201,
+        "data": result
     }
     return make_response(jsonify(data), data["status"])
-
-def allowed_file(filename: str):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

@@ -2,3 +2,5 @@ services:
   flask_app:
     ports:
       - "127.0.0.1:4000:4000"  # Expose uniquement sur localhost (Nginx y accède)
+    environment:
+      - CORS_ORIGINS=https://family-tree.io
