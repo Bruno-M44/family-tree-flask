@@ -13,5 +13,7 @@ geckodriver.log
 /.idea/conventionalCommit.xml
 pictures/
 pet_pictures/
+!app/demo/pictures/
+!app/demo/pet_pictures/
 .env
 *.db
