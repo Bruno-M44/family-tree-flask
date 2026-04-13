@@ -6,6 +6,9 @@ load_dotenv()  # charge le .env dans l'environnement
 
 SQLALCHEMY_DATABASE_URI = environ.get('DB_URL')
 JWT_SECRET_KEY = environ.get('JWT_SECRET_KEY')
+ENCRYPTION_KEY = environ.get('ENCRYPTION_KEY')
+RESEND_API_KEY = environ.get('RESEND_API_KEY')
+FRONTEND_URL = environ.get('FRONTEND_URL', 'http://localhost:5173')
 SQLALCHEMY_ENGINE_OPTIONS = {
     "pool_size": 5,
     "max_overflow": 5,

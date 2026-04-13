@@ -26,3 +26,14 @@ def test_login_missing_fields(client):
 def test_login_empty_body(client):
     response = client.post('/login', json={})
     assert response.status_code == 400
+
+
+def test_login_unverified(client):
+    """User created but email not yet verified cannot log in."""
+    from unittest.mock import patch
+    with patch('app.views.user_view.create_demo_family_tree'):
+        with patch('app.views.user_view.send_verification_email'):
+            client.post('/user', json=USER_1)
+    response = client.post('/login', json=USER_1)
+    assert response.status_code == 403
+    assert response.get_json()['message'] == 'Email not verified'

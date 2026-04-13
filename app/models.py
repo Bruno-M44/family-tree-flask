@@ -6,6 +6,7 @@ import logging as lg
 
 from werkzeug.security import generate_password_hash
 from app import db
+from app.encryption import EncryptedString, EncryptedDateTime
 
 association_user_ft = db.Table(
     "association_user_ft",
@@ -51,10 +52,12 @@ class User(db.Model):
     """user model"""
     # query: db.Query  # autocomplete
     id_user = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    surname = db.Column(db.String, nullable=False)
+    name = db.Column(EncryptedString, nullable=False)
+    surname = db.Column(EncryptedString, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
+    verified = db.Column(db.Boolean, nullable=False, default=False)
+    verification_token = db.Column(db.String, nullable=True)
     family_trees = db.relationship(
         "FamilyTree",
         secondary=association_user_ft,
@@ -85,12 +88,12 @@ class FamilyTreeCell(db.Model):
     """family_tree_cell model"""
     # query: db.Query  # autocomplete
     id_family_tree_cell = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    surnames = db.Column(db.String, nullable=False)
-    birthday = db.Column(db.DateTime, nullable=False)
-    jobs = db.Column(db.String, nullable=False)
-    comments = db.Column(db.String, nullable=False)
-    deathday = db.Column(db.DateTime, nullable=True)
+    name = db.Column(EncryptedString, nullable=False)
+    surnames = db.Column(EncryptedString, nullable=False)
+    birthday = db.Column(EncryptedDateTime, nullable=False)
+    jobs = db.Column(EncryptedString, nullable=False)
+    comments = db.Column(EncryptedString, nullable=False)
+    deathday = db.Column(EncryptedDateTime, nullable=True)
     generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
     pictures = db.relationship("Picture", backref=db.backref("family_tree_cell"))
@@ -210,6 +213,7 @@ def init_db():
     db.drop_all()
     db.create_all()
     user_1 = User(name="Smith", surname="John", email="john.smith@gmail.com", password="password1")
+    user_1.verified = True
     family_tree_1 = FamilyTree(title="Family Smith", family_name="Smith")
     family_tree_cell_1 = FamilyTreeCell(
         name="Smith",
@@ -313,6 +317,7 @@ def init_db():
     db.session.add(user_1)
 
     user_2 = User(name="Dalton", surname="Joe", email="joe.dalton@posteo.net", password="password2")
+    user_2.verified = True
     family_tree_2 = FamilyTree(title="Family Dalton", family_name="Dalton")
     user_2.family_trees.append(family_tree_2)
     db.session.add(user_2)

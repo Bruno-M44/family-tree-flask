@@ -8,3 +8,5 @@ SQLAlchemy
 Werkzeug
 psycopg[binary]
 python-dotenv
+cryptography
+resend

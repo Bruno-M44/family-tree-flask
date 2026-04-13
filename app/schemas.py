@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from marshmallow import fields as ma_fields
 from app import ma
 from app.models import User, FamilyTree, FamilyTreeCell, Picture, Pet, PetPicture
 
@@ -6,7 +7,7 @@ from app.models import User, FamilyTree, FamilyTreeCell, Picture, Pet, PetPictur
 class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        fields = ("id_user", "name", "surname", "email")
+        fields = ("id_user", "name", "surname", "email", "verified")
 
 
 user_schema = UserSchema()
@@ -23,6 +24,9 @@ family_trees_schema = FamilyTreeSchema(many=True)
 
 
 class FamilyTreeCellSchema(ma.SQLAlchemyAutoSchema):
+    birthday = ma_fields.DateTime(allow_none=False)
+    deathday = ma_fields.DateTime(allow_none=True)
+
     class Meta:
         model = FamilyTreeCell
         include_fk = True

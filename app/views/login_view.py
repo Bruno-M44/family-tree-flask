@@ -17,11 +17,9 @@ def login():
         return make_response(jsonify({"message": "email and password are required", "status": 400}), 400)
     user = User.query.filter_by(email=email_).first()
     if not user or not check_password_hash(user.password, password_):
-        data = {
-            "message": "Bad username or password",
-            "status": 401,
-        }
-        return make_response(jsonify(data), data["status"])
+        return make_response(jsonify({"message": "Bad username or password", "status": 401}), 401)
+    if not user.verified:
+        return make_response(jsonify({"message": "Email not verified", "status": 403}), 403)
     result = create_access_token(identity=str(user.id_user))
     data = {
         "message": "Token !",
