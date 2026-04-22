@@ -7,7 +7,7 @@ from app.models import User, FamilyTree, FamilyTreeCell, Picture, Pet, PetPictur
 class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        fields = ("id_user", "name", "surname", "email", "verified")
+        fields = ("id_user", "name", "surname", "email", "verified", "avatar")
 
 
 user_schema = UserSchema()
@@ -16,7 +16,7 @@ user_schema = UserSchema()
 class FamilyTreeSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = FamilyTree
-        fields = ("id_family_tree", "title", "family_name")
+        fields = ("id_family_tree", "title", "family_name", "is_example")
 
 
 family_tree_schema = FamilyTreeSchema()
@@ -30,7 +30,7 @@ class FamilyTreeCellSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = FamilyTreeCell
         include_fk = True
-        fields = ("id_family_tree_cell", "name", "surnames", "birthday", "deathday", "jobs", "comments", "generation", "id_family_tree")
+        fields = ("id_family_tree_cell", "name", "maiden_name", "surnames", "birthday", "deathday", "jobs", "comments", "generation", "id_family_tree")
 
 
 family_tree_cell_schema = FamilyTreeCellSchema()

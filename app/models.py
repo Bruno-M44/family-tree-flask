@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 """Module providing the application models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 import logging as lg
 
+from sqlalchemy import insert
 from werkzeug.security import generate_password_hash
 from app import db
 from app.encryption import EncryptedString, EncryptedDateTime
@@ -14,7 +15,7 @@ association_user_ft = db.Table(
         "user.id_user", ondelete="CASCADE"), primary_key=True),
     db.Column("id_family_tree", db.Integer, db.ForeignKey(
         "family_tree.id_family_tree", ondelete="CASCADE"), primary_key=True),
-    db.Column("permission", db.String, nullable=False, default="view")
+    db.Column("role", db.String, nullable=False, default="viewer")
 )
 
 association_parent_child = db.Table(
@@ -48,6 +49,20 @@ association_couple = db.Table(
 )
 
 
+class FamilyTreeInvitation(db.Model):
+    """Pending invitation to join a family tree for a non-registered email."""
+    id_invitation = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String, nullable=False, index=True)
+    id_family_tree = db.Column(
+        db.Integer,
+        db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role = db.Column(db.String, nullable=False, default="viewer")
+    token = db.Column(db.String, nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
 class User(db.Model):
     """user model"""
     # query: db.Query  # autocomplete
@@ -58,6 +73,7 @@ class User(db.Model):
     password = db.Column(db.String, nullable=False)
     verified = db.Column(db.Boolean, nullable=False, default=False)
     verification_token = db.Column(db.String, nullable=True)
+    avatar = db.Column(db.String, nullable=True)
     family_trees = db.relationship(
         "FamilyTree",
         secondary=association_user_ft,
@@ -77,11 +93,13 @@ class FamilyTree(db.Model):
     id_family_tree = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     family_name = db.Column(db.String, nullable=False)
+    is_example = db.Column(db.Boolean, nullable=False, default=False)
     family_tree_cells = db.relationship("FamilyTreeCell", backref=db.backref("family_tree"))
 
-    def __init__(self, title, family_name):
+    def __init__(self, title, family_name, is_example=False):
         self.title = title
         self.family_name = family_name
+        self.is_example = is_example
 
 
 class FamilyTreeCell(db.Model):
@@ -89,6 +107,7 @@ class FamilyTreeCell(db.Model):
     # query: db.Query  # autocomplete
     id_family_tree_cell = db.Column(db.Integer, primary_key=True)
     name = db.Column(EncryptedString, nullable=False)
+    maiden_name = db.Column(EncryptedString, nullable=True)
     surnames = db.Column(EncryptedString, nullable=False)
     birthday = db.Column(EncryptedDateTime, nullable=False)
     jobs = db.Column(EncryptedString, nullable=False)
@@ -132,9 +151,11 @@ class FamilyTreeCell(db.Model):
         jobs: str,
         comments: str,
         generation: int,
-        deathday: str = None
+        deathday: str = None,
+        maiden_name: str = None
         ):
         self.name = name
+        self.maiden_name = maiden_name
         self.surnames = surnames
         self.birthday = datetime.strptime(birthday, "%d/%m/%Y")
         self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else None
@@ -301,7 +322,12 @@ def init_db():
     family_tree_1.family_tree_cells.append(family_tree_cell_6)
     family_tree_1.family_tree_cells.append(family_tree_cell_7)
     family_tree_1.family_tree_cells.append(family_tree_cell_8)
-    user_1.family_trees.append(family_tree_1)
+    db.session.flush()
+    db.session.execute(
+        insert(association_user_ft).values(
+            id_user=user_1.id_user, id_family_tree=family_tree_1.id_family_tree, role="editor"
+        )
+    )
 
     # determination of x and y
     # sort by birthday
@@ -319,8 +345,17 @@ def init_db():
     user_2 = User(name="Dalton", surname="Joe", email="joe.dalton@posteo.net", password="password2")
     user_2.verified = True
     family_tree_2 = FamilyTree(title="Family Dalton", family_name="Dalton")
-    user_2.family_trees.append(family_tree_2)
     db.session.add(user_2)
+    db.session.flush()
+    db.session.execute(
+        insert(association_user_ft).values(
+            id_user=user_2.id_user, id_family_tree=family_tree_2.id_family_tree, role="editor"
+        )
+    )
+
+    user_demo = User(name="Demo", surname="User", email="demo@demo.com", password="demo")
+    user_demo.verified = True
+    db.session.add(user_demo)
 
     db.session.commit()
     lg.warning('Database initialized!')

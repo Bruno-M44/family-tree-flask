@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import jsonify, make_response, request, Blueprint, send_from_directory
 from flask_jwt_extended import jwt_required
 from werkzeug.utils import secure_filename
+from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from ..models import Pet, PetPicture, FamilyTreeCell
 from ..schemas import pet_picture_schema, pets_pictures_schema
@@ -76,9 +77,9 @@ def get_update_delete_pet_picture(id_pet: int, id_pet_picture: int):
 
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = pet_picture_schema.dump(pet_picture)
         return make_response(jsonify({"message": "Pet Picture Modified !", "status": 200, "data": result}), 200)
 
@@ -86,9 +87,9 @@ def get_update_delete_pet_picture(id_pet: int, id_pet_picture: int):
     db.session.delete(pet_picture)
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
     result = pet_picture_schema.dump(pet_picture)
     return make_response(jsonify({"message": "Pet Picture Deleted !", "status": 200, "data": result}), 200)
 
@@ -189,8 +190,8 @@ def upload_pet_picture(id_pet: int):
     pet.pets_pictures.append(new_pet_picture)
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
     result = pet_picture_schema.dump(new_pet_picture)
     return make_response(jsonify({"message": "Pet Picture Created !", "status": 201, "data": result}), 201)

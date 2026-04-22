@@ -27,6 +27,7 @@ def create_demo_family_tree(user):
     ft = FamilyTree(
         title=DEMO_FAMILY_TREE["title"],
         family_name=DEMO_FAMILY_TREE["family_name"],
+        is_example=True,
     )
     db.session.add(ft)
     db.session.flush()
@@ -37,6 +38,7 @@ def create_demo_family_tree(user):
     for cell_data in DEMO_CELLS:
         cell = FamilyTreeCell(
             name=cell_data["name"],
+            maiden_name=cell_data.get("maiden_name"),
             surnames=cell_data["surnames"],
             birthday=cell_data["birthday"],
             jobs=cell_data["jobs"],
@@ -111,7 +113,7 @@ def create_demo_family_tree(user):
         insert(association_user_ft).values(
             id_user=user.id_user,
             id_family_tree=ft.id_family_tree,
-            permission="edit",
+            role="editor",
         )
     )
 

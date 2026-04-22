@@ -123,7 +123,7 @@ def test_export_user_data_structure(client, auth_headers):
     for ft in data['family_trees']:
         assert 'title' in ft
         assert 'family_name' in ft
-        assert 'permission' in ft
+        assert 'role' in ft
         assert 'members' in ft
         assert isinstance(ft['members'], list)
         for member in ft['members']:

@@ -2,6 +2,8 @@ import werkzeug.exceptions
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from sqlalchemy import insert
+from sqlalchemy.exc import SQLAlchemyError
 from ..models import User, FamilyTree, association_user_ft, FamilyTreeCell, Picture
 from ..schemas import family_trees_schema, family_tree_schema
 from app import db
@@ -36,12 +38,18 @@ def create_family_tree():
         return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
 
     new_family_tree = FamilyTree(title=body['title'], family_name=body['family_name'])
-    user.family_trees.append(new_family_tree)
+    db.session.add(new_family_tree)
+    db.session.flush()
+    db.session.execute(
+        insert(association_user_ft).values(
+            id_user=current_user, id_family_tree=new_family_tree.id_family_tree, role="editor"
+        )
+    )
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
 
     result = family_tree_schema.dump(new_family_tree)
     data = {
@@ -88,9 +96,9 @@ def get_update_delete_family_tree(id_family_tree: int):
 
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = family_tree_schema.dump(family_tree)
         data = {
             "message": "Family Tree Modified !",
@@ -109,9 +117,9 @@ def get_update_delete_family_tree(id_family_tree: int):
         db.session.delete(family_tree)
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = family_tree_schema.dump(family_tree)
         data = {
             "message": "Family Tree Deleted !",

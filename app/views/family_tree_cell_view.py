@@ -6,8 +6,9 @@ from flask_jwt_extended import jwt_required
 from ..models import FamilyTree, FamilyTreeCell, Picture, association_parent_child, association_couple
 from ..schemas import family_tree_cell_schema
 from .verify_user_authorized import VerifyUserAuthorized
+from sqlalchemy import select, or_, insert, delete, update
+from sqlalchemy.exc import SQLAlchemyError
 from app import db
-from sqlalchemy import select, or_
 
 
 family_tree_cell_app = Blueprint("family_tree_cell_app", __name__)
@@ -122,6 +123,7 @@ def create_family_tree_cell(id_family_tree: int):
     try:
         new_family_tree_cell = FamilyTreeCell(
             name=body['name'],
+            maiden_name=body.get('maiden_name'),
             surnames=body['surnames'],
             birthday=body['birthday'],
             deathday=body.get('deathday'),
@@ -155,9 +157,9 @@ def create_family_tree_cell(id_family_tree: int):
 
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
 
     result = family_tree_cell_schema.dump(new_family_tree_cell)
     data = {
@@ -203,6 +205,8 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
         data = request.get_json() or {}
         if 'name' in data:
             family_tree_cell.name = data['name']
+        if 'maiden_name' in data:
+            family_tree_cell.maiden_name = data['maiden_name'] or None
         if 'surnames' in data:
             family_tree_cell.surnames = data['surnames']
         if 'jobs' in data:
@@ -221,9 +225,9 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
 
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = family_tree_cell_schema.dump(family_tree_cell)
 
         data = {
@@ -238,9 +242,9 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
         db.session.delete(family_tree_cell)
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = family_tree_cell_schema.dump(family_tree_cell)
         data = {
             "message": "Family Tree Cell Deleted !",
@@ -248,6 +252,206 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
             "data": result
         }
         return make_response(jsonify(data), data["status"])
+
+
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/couple",
+    methods=["POST"],
+    endpoint="add_couple"
+)
+@jwt_required()
+@VerifyUserAuthorized
+def add_couple(id_family_tree: int, id_family_tree_cell: int):
+    try:
+        FamilyTreeCell.query.filter_by(
+            id_family_tree=id_family_tree,
+            id_family_tree_cell=id_family_tree_cell).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        return make_response(jsonify({"message": "Bad family tree or family tree cell", "status": 404}), 404)
+
+    body = request.get_json() or {}
+    partner_id = body.get("partner_id")
+    if partner_id is None:
+        return make_response(jsonify({"message": "Missing field: partner_id", "status": 400}), 400)
+
+    if db.session.get(FamilyTreeCell, partner_id) is None:
+        return make_response(jsonify({"message": f"Partner cell {partner_id} not found", "status": 404}), 404)
+
+    existing = db.session.query(association_couple).filter(or_(
+        (association_couple.c.id_family_tree_cell_couple_1 == id_family_tree_cell) &
+        (association_couple.c.id_family_tree_cell_couple_2 == partner_id),
+        (association_couple.c.id_family_tree_cell_couple_1 == partner_id) &
+        (association_couple.c.id_family_tree_cell_couple_2 == id_family_tree_cell)
+    )).first()
+    if existing:
+        return make_response(jsonify({"message": "Couple relation already exists", "status": 409}), 409)
+
+    start_union = end_union = None
+    try:
+        if body.get("start_union"):
+            start_union = datetime.strptime(body["start_union"], "%d/%m/%Y")
+        if body.get("end_union"):
+            end_union = datetime.strptime(body["end_union"], "%d/%m/%Y")
+    except ValueError:
+        return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
+
+    try:
+        db.session.execute(
+            insert(association_couple).values(
+                id_family_tree_cell_couple_1=id_family_tree_cell,
+                id_family_tree_cell_couple_2=partner_id,
+                start_union=start_union,
+                end_union=end_union
+            )
+        )
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    return make_response(jsonify({"message": "Couple relation added", "status": 201}), 201)
+
+
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/couple/<int:id_partner>",
+    methods=["PUT", "DELETE"],
+    endpoint="update_delete_couple"
+)
+@jwt_required()
+@VerifyUserAuthorized
+def update_delete_couple(id_family_tree: int, id_family_tree_cell: int, id_partner: int):
+    try:
+        FamilyTreeCell.query.filter_by(
+            id_family_tree=id_family_tree,
+            id_family_tree_cell=id_family_tree_cell).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        return make_response(jsonify({"message": "Bad family tree or family tree cell", "status": 404}), 404)
+
+    couple_filter = or_(
+        (association_couple.c.id_family_tree_cell_couple_1 == id_family_tree_cell) &
+        (association_couple.c.id_family_tree_cell_couple_2 == id_partner),
+        (association_couple.c.id_family_tree_cell_couple_1 == id_partner) &
+        (association_couple.c.id_family_tree_cell_couple_2 == id_family_tree_cell)
+    )
+    row = db.session.query(association_couple).filter(couple_filter).first()
+    if not row:
+        return make_response(jsonify({"message": "Couple relation not found", "status": 404}), 404)
+
+    if request.method == "DELETE":
+        try:
+            db.session.execute(delete(association_couple).where(couple_filter))
+            db.session.commit()
+        except SQLAlchemyError as err:
+            db.session.rollback()
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+        return make_response(jsonify({"message": "Couple relation deleted", "status": 200}), 200)
+
+    if request.method == "PUT":
+        body = request.get_json() or {}
+        updates = {}
+        try:
+            if "start_union" in body:
+                updates["start_union"] = datetime.strptime(body["start_union"], "%d/%m/%Y") if body["start_union"] else None
+            if "end_union" in body:
+                updates["end_union"] = datetime.strptime(body["end_union"], "%d/%m/%Y") if body["end_union"] else None
+        except ValueError:
+            return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
+
+        if not updates:
+            return make_response(jsonify({"message": "No fields to update", "status": 400}), 400)
+
+        try:
+            db.session.execute(
+                update(association_couple)
+                .where(
+                    (association_couple.c.id_family_tree_cell_couple_1 == row.id_family_tree_cell_couple_1) &
+                    (association_couple.c.id_family_tree_cell_couple_2 == row.id_family_tree_cell_couple_2)
+                )
+                .values(**updates)
+            )
+            db.session.commit()
+        except SQLAlchemyError as err:
+            db.session.rollback()
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+        return make_response(jsonify({"message": "Couple relation updated", "status": 200}), 200)
+
+
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/parent",
+    methods=["POST"],
+    endpoint="add_parent"
+)
+@jwt_required()
+@VerifyUserAuthorized
+def add_parent(id_family_tree: int, id_family_tree_cell: int):
+    try:
+        cell = FamilyTreeCell.query.filter_by(
+            id_family_tree=id_family_tree,
+            id_family_tree_cell=id_family_tree_cell).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        return make_response(jsonify({"message": "Bad family tree or family tree cell", "status": 404}), 404)
+
+    body = request.get_json() or {}
+    parent_id = body.get("parent_id")
+    if parent_id is None:
+        return make_response(jsonify({"message": "Missing field: parent_id", "status": 400}), 400)
+
+    parent = db.session.get(FamilyTreeCell, parent_id)
+    if parent is None:
+        return make_response(jsonify({"message": f"Parent cell {parent_id} not found", "status": 404}), 404)
+
+    existing = db.session.query(association_parent_child).filter(
+        association_parent_child.c.id_family_tree_cell_parent == parent_id,
+        association_parent_child.c.id_family_tree_cell_child == id_family_tree_cell
+    ).first()
+    if existing:
+        return make_response(jsonify({"message": "Parent relation already exists", "status": 409}), 409)
+
+    try:
+        parent.parent.append(cell)
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    return make_response(jsonify({"message": "Parent relation added", "status": 201}), 201)
+
+
+@family_tree_cell_app.route(
+    "/family_trees/<int:id_family_tree>/family_tree_cells/<int:id_family_tree_cell>/parent/<int:id_parent>",
+    methods=["DELETE"],
+    endpoint="delete_parent"
+)
+@jwt_required()
+@VerifyUserAuthorized
+def delete_parent(id_family_tree: int, id_family_tree_cell: int, id_parent: int):
+    try:
+        FamilyTreeCell.query.filter_by(
+            id_family_tree=id_family_tree,
+            id_family_tree_cell=id_family_tree_cell).first_or_404()
+    except werkzeug.exceptions.NotFound:
+        return make_response(jsonify({"message": "Bad family tree or family tree cell", "status": 404}), 404)
+
+    existing = db.session.query(association_parent_child).filter(
+        association_parent_child.c.id_family_tree_cell_parent == id_parent,
+        association_parent_child.c.id_family_tree_cell_child == id_family_tree_cell
+    ).first()
+    if not existing:
+        return make_response(jsonify({"message": "Parent relation not found", "status": 404}), 404)
+
+    try:
+        db.session.execute(
+            delete(association_parent_child).where(
+                association_parent_child.c.id_family_tree_cell_parent == id_parent,
+                association_parent_child.c.id_family_tree_cell_child == id_family_tree_cell
+            )
+        )
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    return make_response(jsonify({"message": "Parent relation deleted", "status": 200}), 200)
 
 
 def get_children(family_tree_cell: FamilyTreeCell) -> list:

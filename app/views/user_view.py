@@ -3,16 +3,21 @@ import json
 import os
 import uuid
 import zipfile
+from typing import Optional
 import werkzeug.exceptions
-from flask import jsonify, make_response, request, Blueprint, Response
+from flask import jsonify, make_response, request, Blueprint, Response, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, select
+from sqlalchemy import func, select, insert, delete, update
+from sqlalchemy.exc import SQLAlchemyError
 
 from werkzeug.security import generate_password_hash
-from ..models import User, FamilyTree, association_user_ft, FamilyTreeCell, Picture, Pet, PetPicture
+from werkzeug.utils import secure_filename
+from .utils import allowed_file
+from ..models import User, FamilyTree, FamilyTreeInvitation, association_user_ft, FamilyTreeCell, Picture, Pet, PetPicture
 from ..schemas import user_schema, family_tree_schema
 from ..demo.creator import create_demo_family_tree
-from ..email_service import send_verification_email
+from datetime import datetime, timedelta, timezone
+from ..email_service import send_verification_email, send_member_added_email, send_member_invitation_email
 from app import db
 
 
@@ -31,9 +36,9 @@ def verify_email():
     user.verification_token = None
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
     return make_response(jsonify({"message": "Email verified !", "status": 200}), 200)
 
 
@@ -44,12 +49,12 @@ def export_user_data():
     user = db.session.get(User, current_user)
 
     family_trees_data = []
-    rows = db.session.query(FamilyTree, association_user_ft.c.permission).join(
+    rows = db.session.query(FamilyTree, association_user_ft.c.role).join(
         association_user_ft,
         FamilyTree.id_family_tree == association_user_ft.c.id_family_tree
     ).filter(association_user_ft.c.id_user == current_user).all()
 
-    for family_tree, permission in rows:
+    for family_tree, role in rows:
         cells_data = []
         cells = FamilyTreeCell.query.filter_by(id_family_tree=family_tree.id_family_tree).all()
         for cell in cells:
@@ -94,7 +99,7 @@ def export_user_data():
         family_trees_data.append({
             "title": family_tree.title,
             "family_name": family_tree.family_name,
-            "permission": permission,
+            "role": role,
             "members": cells_data,
         })
 
@@ -141,15 +146,15 @@ def get_user():
     user = db.session.get(User, current_user)
     result = user_schema.dump(user)
 
-    rows = db.session.query(FamilyTree, association_user_ft.c.permission).join(
+    rows = db.session.query(FamilyTree, association_user_ft.c.role).join(
         association_user_ft,
         FamilyTree.id_family_tree == association_user_ft.c.id_family_tree
     ).filter(association_user_ft.c.id_user == current_user).all()
 
     family_trees_result = []
-    for family_tree, permission in rows:
+    for family_tree, role in rows:
         ft = family_tree_schema.dump(family_tree)
-        ft["permission"] = permission
+        ft["role"] = role
         family_trees_result.append(ft)
     result["family_trees"] = family_trees_result
 
@@ -159,6 +164,22 @@ def get_user():
         "data": result
     }
     return make_response(jsonify(data), data["status"])
+
+
+def _consume_invitations(user: User) -> None:
+    """Add the new user to every family tree for which a pending invitation exists, then delete them."""
+    expiry_cutoff: datetime = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+    invitations: list = FamilyTreeInvitation.query.filter_by(email=user.email).all()
+    for inv in invitations:
+        if inv.created_at >= expiry_cutoff:
+            db.session.execute(
+                insert(association_user_ft).values(
+                    id_user=user.id_user,
+                    id_family_tree=inv.id_family_tree,
+                    role=inv.role,
+                )
+            )
+        db.session.delete(inv)
 
 
 @user_app.route("/user", methods=["POST"], endpoint="create_user")
@@ -184,11 +205,12 @@ def create_user():
         db.session.add(new_user)
         db.session.flush()
         create_demo_family_tree(new_user)
+        _consume_invitations(new_user)
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         send_verification_email(email_, token)
         result = user_schema.dump(new_user)
         data = {
@@ -215,16 +237,21 @@ def update_user():
         user.name = data['name']
     if 'surname' in data:
         user.surname = data['surname']
-    if 'email' in data:
+    if 'email' in data and data['email'] != user.email:
+        if User.query.filter_by(email=data['email']).first():
+            return make_response(jsonify({"message": "Email already in use", "status": 409}), 409)
         user.email = data['email']
+        user.verified = False
+        user.verification_token = str(uuid.uuid4())
+        send_verification_email(user.email, user.verification_token)
     if 'password' in data:
         user.password = generate_password_hash(data['password'])
 
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
     result = user_schema.dump(user)
     data = {
         "message": "User Modified !",
@@ -232,6 +259,344 @@ def update_user():
         "data": result
     }
     return make_response(jsonify(data), data["status"])
+
+
+@user_app.route(
+    "/user/family-tree/<int:id_family_tree>/members",
+    methods=["GET"],
+    endpoint="get_family_tree_members",
+)
+@jwt_required()
+def get_family_tree_members(id_family_tree: int) -> Response:
+    """Return the list of members (id, name, surname, email, role) of a family tree."""
+    current_user: int = int(get_jwt_identity())
+
+    if _get_member_role(current_user, id_family_tree) is None:
+        return make_response(jsonify({"message": "Not authorized", "status": 403}), 403)
+
+    rows = db.session.query(User, association_user_ft.c.role).join(
+        association_user_ft,
+        User.id_user == association_user_ft.c.id_user,
+    ).filter(
+        association_user_ft.c.id_family_tree == id_family_tree
+    ).all()
+
+    members: list = [
+        {
+            "id_user": user.id_user,
+            "name": user.name,
+            "surname": user.surname,
+            "email": user.email,
+            "role": role,
+        }
+        for user, role in rows
+    ]
+
+    return make_response(jsonify({"message": "Members", "status": 200, "data": members}), 200)
+
+
+VALID_ROLES: tuple = ("viewer", "editor")
+
+
+def _get_member_role(id_user: int, id_family_tree: int) -> Optional[str]:
+    """Return the role of a user in a family tree, or None if not a member."""
+    row = db.session.execute(
+        select(association_user_ft.c.role).where(
+            association_user_ft.c.id_user == id_user,
+            association_user_ft.c.id_family_tree == id_family_tree,
+        )
+    ).first()
+    return row[0] if row else None
+
+
+def _get_user_by_email(email: str) -> Optional[User]:
+    """Return the User matching the given email, or None if not found."""
+    return User.query.filter_by(email=email).first()
+
+
+@user_app.route(
+    "/user/family-tree/<int:id_family_tree>/member",
+    methods=["POST"],
+    endpoint="add_member",
+)
+@jwt_required()
+def add_member(id_family_tree: int) -> Response:
+    """Add a user (identified by email) as a member of a family tree."""
+    current_user: int = int(get_jwt_identity())
+    if _get_member_role(current_user, id_family_tree) != "editor":
+        return make_response(jsonify({"message": "Not authorized", "status": 403}), 403)
+
+    body: dict = request.get_json() or {}
+    email: Optional[str] = body.get("email")
+    role: str = body.get("role", "viewer")
+
+    if not email:
+        return make_response(jsonify({"message": "Missing email", "status": 400}), 400)
+    if role not in VALID_ROLES:
+        return make_response(
+            jsonify({"message": "role must be 'viewer' or 'editor'", "status": 400}), 400
+        )
+
+    inviter: User = db.session.get(User, current_user)
+    family_tree: Optional[FamilyTree] = db.session.get(FamilyTree, id_family_tree)
+
+    target_user: Optional[User] = _get_user_by_email(email)
+    if target_user is None:
+        invitation_token: str = str(uuid.uuid4())
+        invitation: FamilyTreeInvitation = FamilyTreeInvitation(
+            email=email,
+            id_family_tree=id_family_tree,
+            role=role,
+            token=invitation_token,
+        )
+        db.session.add(invitation)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as err:
+            db.session.rollback()
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+        send_member_invitation_email(
+            to_email=email,
+            tree_title=family_tree.title,
+            family_name=family_tree.family_name,
+            inviter_name=f"{inviter.name} {inviter.surname}",
+            invitation_token=invitation_token,
+        )
+        return make_response(jsonify({"status": "invitation_sent", "message": "Invitation sent"}), 200)
+
+    if _get_member_role(target_user.id_user, id_family_tree) is not None:
+        return make_response(
+            jsonify({"message": "User already member of this tree", "status": 409}), 409
+        )
+
+    db.session.execute(
+        insert(association_user_ft).values(
+            id_user=target_user.id_user, id_family_tree=id_family_tree, role=role
+        )
+    )
+    try:
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    send_member_added_email(
+        to_email=email,
+        tree_title=family_tree.title,
+        family_name=family_tree.family_name,
+        inviter_name=f"{inviter.name} {inviter.surname}",
+    )
+    return make_response(jsonify({"message": "Member added", "status": 201}), 201)
+
+
+@user_app.route(
+    "/user/family-tree/<int:id_family_tree>/leave",
+    methods=["DELETE"],
+    endpoint="leave_family_tree",
+)
+@jwt_required()
+def leave_family_tree(id_family_tree: int) -> Response:
+    """Allow the authenticated user to leave a family tree they are a member of."""
+    current_user: int = int(get_jwt_identity())
+
+    if _get_member_role(current_user, id_family_tree) is None:
+        return make_response(jsonify({"message": "You are not a member of this tree", "status": 404}), 404)
+
+    count: int = db.session.execute(
+        select(func.count()).select_from(association_user_ft).where(
+            association_user_ft.c.id_family_tree == id_family_tree
+        )
+    ).scalar()
+    if count <= 1:
+        return make_response(
+            jsonify({"message": "Cannot leave a tree you are the last member of", "status": 409}), 409
+        )
+
+    editor_count: int = db.session.execute(
+        select(func.count()).select_from(association_user_ft).where(
+            association_user_ft.c.id_family_tree == id_family_tree,
+            association_user_ft.c.role == "editor",
+            association_user_ft.c.id_user != current_user,
+        )
+    ).scalar()
+    if _get_member_role(current_user, id_family_tree) == "editor" and editor_count == 0:
+        return make_response(
+            jsonify({"message": "Cannot leave: you are the last editor of this tree", "status": 409}), 409
+        )
+
+    db.session.execute(
+        delete(association_user_ft).where(
+            association_user_ft.c.id_user == current_user,
+            association_user_ft.c.id_family_tree == id_family_tree,
+        )
+    )
+    try:
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+    return make_response(jsonify({"message": "You have left the tree", "status": 200}), 200)
+
+
+@user_app.route(
+    "/user/family-tree/<int:id_family_tree>/member/<string:email>",
+    methods=["DELETE"],
+    endpoint="remove_member",
+)
+@jwt_required()
+def remove_member(id_family_tree: int, email: str) -> Response:
+    """Remove a user (identified by email) from a family tree."""
+    current_user: int = int(get_jwt_identity())
+    if _get_member_role(current_user, id_family_tree) != "editor":
+        return make_response(jsonify({"message": "Not authorized", "status": 403}), 403)
+
+    target_user: Optional[User] = _get_user_by_email(email)
+    if target_user is None:
+        return make_response(jsonify({"message": "User not found", "status": 404}), 404)
+    if _get_member_role(target_user.id_user, id_family_tree) is None:
+        return make_response(
+            jsonify({"message": "User not member of this tree", "status": 404}), 404
+        )
+
+    count: int = db.session.execute(
+        select(func.count()).select_from(association_user_ft).where(
+            association_user_ft.c.id_family_tree == id_family_tree
+        )
+    ).scalar()
+    if count <= 1:
+        return make_response(
+            jsonify({"message": "Cannot remove the last member of a tree", "status": 409}), 409
+        )
+
+    db.session.execute(
+        delete(association_user_ft).where(
+            association_user_ft.c.id_user == target_user.id_user,
+            association_user_ft.c.id_family_tree == id_family_tree,
+        )
+    )
+    try:
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+    return make_response(jsonify({"message": "Member removed", "status": 200}), 200)
+
+
+@user_app.route(
+    "/user/family-tree/<int:id_family_tree>/member/<string:email>",
+    methods=["PATCH"],
+    endpoint="update_member_role",
+)
+@jwt_required()
+def update_member_role(id_family_tree: int, email: str) -> Response:
+    """Update the role of a user (identified by email) in a family tree."""
+    current_user: int = int(get_jwt_identity())
+    if _get_member_role(current_user, id_family_tree) != "editor":
+        return make_response(jsonify({"message": "Not authorized", "status": 403}), 403)
+
+    body: dict = request.get_json() or {}
+    new_role: Optional[str] = body.get("role")
+    if new_role not in VALID_ROLES:
+        return make_response(
+            jsonify({"message": "role must be 'viewer' or 'editor'", "status": 400}), 400
+        )
+
+    target_user: Optional[User] = _get_user_by_email(email)
+    if target_user is None:
+        return make_response(jsonify({"message": "User not found", "status": 404}), 404)
+    if _get_member_role(target_user.id_user, id_family_tree) is None:
+        return make_response(
+            jsonify({"message": "User not member of this tree", "status": 404}), 404
+        )
+
+    db.session.execute(
+        update(association_user_ft).where(
+            association_user_ft.c.id_user == target_user.id_user,
+            association_user_ft.c.id_family_tree == id_family_tree,
+        ).values(role=new_role)
+    )
+    try:
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+    return make_response(jsonify({"message": "Role updated", "status": 200}), 200)
+
+
+@user_app.route("/user/avatar", methods=["GET"], endpoint="get_avatar")
+@jwt_required()
+def get_avatar() -> Response:
+    """Serve the avatar file of the authenticated user."""
+    current_user: int = int(get_jwt_identity())
+    user: User = db.session.get(User, current_user)
+
+    if not user.avatar:
+        return make_response(jsonify({"message": "No avatar", "status": 404}), 404)
+
+    return send_from_directory(f"/avatars/{current_user}", user.avatar)
+
+
+@user_app.route("/user/avatar", methods=["POST"], endpoint="upload_avatar")
+@jwt_required()
+def upload_avatar() -> Response:
+    """Upload or replace the avatar of the authenticated user."""
+    from .utils import allowed_file
+    current_user: int = int(get_jwt_identity())
+    user: User = db.session.get(User, current_user)
+
+    if "file" not in request.files:
+        return make_response(jsonify({"message": "No file part", "status": 400}), 400)
+
+    file = request.files["file"]
+    if file.filename == "":
+        return make_response(jsonify({"message": "No selected file", "status": 400}), 400)
+    if not allowed_file(file.filename):
+        return make_response(jsonify({"message": "File not allowed", "status": 400}), 400)
+
+    if user.avatar:
+        old_path: str = f"/avatars/{current_user}/{user.avatar}"
+        try:
+            os.remove(old_path)
+        except FileNotFoundError:
+            pass
+
+    filename: str = secure_filename(str(uuid.uuid4()) + "." + file.filename.rsplit(".", 1)[1].lower())
+    os.makedirs(f"/avatars/{current_user}", exist_ok=True)
+    file.save(f"/avatars/{current_user}/{filename}")
+
+    user.avatar = filename
+    try:
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    return make_response(jsonify({"message": "Avatar uploaded", "status": 200, "avatar": filename}), 200)
+
+
+@user_app.route("/user/avatar", methods=["DELETE"], endpoint="delete_avatar")
+@jwt_required()
+def delete_avatar() -> Response:
+    """Delete the avatar of the authenticated user and remove the file from disk."""
+    current_user: int = int(get_jwt_identity())
+    user: User = db.session.get(User, current_user)
+
+    if not user.avatar:
+        return make_response(jsonify({"message": "No avatar to delete", "status": 404}), 404)
+
+    try:
+        os.remove(f"/avatars/{current_user}/{user.avatar}")
+    except FileNotFoundError:
+        pass
+
+    user.avatar = None
+    try:
+        db.session.commit()
+    except SQLAlchemyError as err:
+        db.session.rollback()
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    return make_response(jsonify({"message": "Avatar deleted", "status": 200}), 200)
 
 
 @user_app.route("/user", methods=["DELETE"], endpoint="delete_user")
@@ -290,9 +655,9 @@ def delete_user():
     db.session.delete(user)
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
 
     for path in files_to_delete:
         try:

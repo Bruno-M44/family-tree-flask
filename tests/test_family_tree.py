@@ -28,6 +28,7 @@ def test_create_family_tree(client, auth_headers):
     assert data['title'] == FAMILY_TREE['title']
     assert data['family_name'] == FAMILY_TREE['family_name']
     assert 'id_family_tree' in data
+    assert data['is_example'] is False
 
 
 def test_create_family_tree_missing_fields(client, auth_headers):

@@ -10,6 +10,7 @@ services:
     volumes:
       - /var/pictures:/pictures
       - /var/pet_pictures:/pet_pictures
+      - /var/avatars:/avatars
     networks:
       - shared_network
 

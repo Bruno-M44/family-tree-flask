@@ -4,6 +4,7 @@ import werkzeug.exceptions
 from datetime import datetime
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required
+from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from ..models import FamilyTreeCell, Pet
 from ..schemas import pets_schema, pet_schema
@@ -61,9 +62,9 @@ def create_pet(id_family_tree_cell: int):
     family_tree_cell.pets.append(new_pet)
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
 
     result = pet_schema.dump(new_pet)
     data = {
@@ -122,9 +123,9 @@ def get_update_delete_pet(id_family_tree_cell: int, id_pet: int):
 
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = pet_schema.dump(pet)
         data = {
             "message": "Pet Modified !",
@@ -137,9 +138,9 @@ def get_update_delete_pet(id_family_tree_cell: int, id_pet: int):
         db.session.delete(pet)
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = pet_schema.dump(pet)
         data = {
             "message": "Pet Deleted !",

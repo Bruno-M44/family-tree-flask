@@ -10,6 +10,7 @@ from ..models import FamilyTreeCell, Picture
 from ..schemas import pictures_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
 from .utils import allowed_file
+from sqlalchemy.exc import SQLAlchemyError
 from app import db
 
 
@@ -72,9 +73,9 @@ def get_update_picture(id_family_tree: int, id_family_tree_cell: int, id_picture
 
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError as err:
             db.session.rollback()
-            return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+            return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
         result = picture_schema.dump(picture)
         data = {
             "message": "Picture Modified !",
@@ -199,9 +200,9 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
     family_tree_cell.pictures.append(new_picture)
     try:
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError as err:
         db.session.rollback()
-        return make_response(jsonify({"message": "Database error", "status": 500}), 500)
+        return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
     result = picture_schema.dump(new_picture)
 
     data = {
