@@ -323,6 +323,9 @@ def init_db():
     family_tree_1.family_tree_cells.append(family_tree_cell_7)
     family_tree_1.family_tree_cells.append(family_tree_cell_8)
     db.session.flush()
+    db.session.add(user_1)
+    db.session.add(family_tree_1)
+    db.session.flush()
     db.session.execute(
         insert(association_user_ft).values(
             id_user=user_1.id_user, id_family_tree=family_tree_1.id_family_tree, role="editor"
@@ -340,12 +343,11 @@ def init_db():
 
 
 
-    db.session.add(user_1)
-
     user_2 = User(name="Dalton", surname="Joe", email="joe.dalton@posteo.net", password="password2")
     user_2.verified = True
     family_tree_2 = FamilyTree(title="Family Dalton", family_name="Dalton")
     db.session.add(user_2)
+    db.session.add(family_tree_2)
     db.session.flush()
     db.session.execute(
         insert(association_user_ft).values(
