@@ -108,6 +108,22 @@ def get_update_delete_family_tree(id_family_tree: int):
         return make_response(jsonify(data), data["status"])
 
     if request.method == "DELETE":
+        cell_ids = db.session.query(FamilyTreeCell.id_family_tree_cell).filter_by(id_family_tree=id_family_tree).all()
+        cell_ids_list = [c[0] for c in cell_ids]
+        if cell_ids_list:
+            from app.models import association_parent_child, association_couple
+            db.session.execute(
+                association_parent_child.delete().where(
+                    association_parent_child.c.id_family_tree_cell_parent.in_(cell_ids_list) |
+                    association_parent_child.c.id_family_tree_cell_child.in_(cell_ids_list)
+                )
+            )
+            db.session.execute(
+                association_couple.delete().where(
+                    association_couple.c.id_family_tree_cell_couple_1.in_(cell_ids_list) |
+                    association_couple.c.id_family_tree_cell_couple_2.in_(cell_ids_list)
+                )
+            )
         Picture.query.filter(
             Picture.id_family_tree_cell.in_(
                 db.session.query(FamilyTreeCell.id_family_tree_cell).filter_by(id_family_tree=id_family_tree)

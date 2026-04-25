@@ -17,3 +17,4 @@ pet_pictures/
 !app/demo/pet_pictures/
 .env
 *.db
+PREFERENCES.md

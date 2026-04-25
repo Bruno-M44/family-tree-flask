@@ -71,3 +71,92 @@ def test_delete_family_tree(client, auth_headers, created_family_tree):
     # Verify it no longer exists
     response = client.get(f'/family_trees/{ft_id}', headers=auth_headers)
     assert response.status_code == 404
+
+
+def test_delete_family_tree_with_cells(client, auth_headers, created_family_tree):
+    """Delete a family tree that has cells with parent-child relations."""
+    ft_id = created_family_tree['id_family_tree']
+    # Create parent cell
+    parent = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={
+            'name': 'Parent',
+            'surnames': 'Smith',
+            'birthday': '01/01/1960',
+            'jobs': '',
+            'comments': '',
+            'generation': 1,
+        },
+        headers=auth_headers,
+    )
+    assert parent.status_code == 201
+    parent_id = parent.get_json()['data']['id_family_tree_cell']
+
+    # Create child cell with parent relation
+    child = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={
+            'name': 'Child',
+            'surnames': 'Smith',
+            'birthday': '01/01/1990',
+            'jobs': '',
+            'comments': '',
+            'generation': 2,
+            'parents': [parent_id],
+        },
+        headers=auth_headers,
+    )
+    assert child.status_code == 201
+    child_id = child.get_json()['data']['id_family_tree_cell']
+
+    # Delete the family tree - should succeed despite relations
+    response = client.delete(f'/family_trees/{ft_id}', headers=auth_headers)
+    assert response.status_code == 200
+
+    # Verify it no longer exists
+    response = client.get(f'/family_trees/{ft_id}', headers=auth_headers)
+    assert response.status_code == 404
+
+
+def test_delete_family_tree_with_couples(client, auth_headers, created_family_tree):
+    """Delete a family tree that has cells with couple relations."""
+    ft_id = created_family_tree['id_family_tree']
+    # Create first person
+    person1 = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={
+            'name': 'Alice',
+            'surnames': 'Smith',
+            'birthday': '01/01/1960',
+            'jobs': '',
+            'comments': '',
+            'generation': 1,
+        },
+        headers=auth_headers,
+    )
+    assert person1.status_code == 201
+    person1_id = person1.get_json()['data']['id_family_tree_cell']
+
+    # Create second person with couple relation
+    person2 = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={
+            'name': 'Bob',
+            'surnames': 'Smith',
+            'birthday': '01/01/1962',
+            'jobs': '',
+            'comments': '',
+            'generation': 1,
+            'couples': [person1_id],
+        },
+        headers=auth_headers,
+    )
+    assert person2.status_code == 201
+
+    # Delete the family tree - should succeed despite relations
+    response = client.delete(f'/family_trees/{ft_id}', headers=auth_headers)
+    assert response.status_code == 200
+
+    # Verify it no longer exists
+    response = client.get(f'/family_trees/{ft_id}', headers=auth_headers)
+    assert response.status_code == 404
