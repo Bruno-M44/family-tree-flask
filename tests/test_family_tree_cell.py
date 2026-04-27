@@ -135,6 +135,50 @@ def test_create_family_tree_cell_missing_fields(client, auth_headers, created_fa
     assert response.status_code == 400
 
 
+def test_create_family_tree_cell_without_birthday(client, auth_headers, created_family_tree):
+    ft_id = created_family_tree['id_family_tree']
+    response = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={'name': 'John', 'surnames': 'Smith', 'generation': 1},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.get_json()['data']['birthday'] is None
+
+
+def test_create_family_tree_cell_birthday_null(client, auth_headers, created_family_tree):
+    ft_id = created_family_tree['id_family_tree']
+    response = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={'name': 'John', 'surnames': 'Smith', 'birthday': None, 'generation': 1},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.get_json()['data']['birthday'] is None
+
+
+def test_create_family_tree_cell_without_jobs(client, auth_headers, created_family_tree):
+    ft_id = created_family_tree['id_family_tree']
+    response = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={'name': 'John', 'surnames': 'Smith', 'generation': 1},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.get_json()['data']['jobs'] is None
+
+
+def test_create_family_tree_cell_without_comments(client, auth_headers, created_family_tree):
+    ft_id = created_family_tree['id_family_tree']
+    response = client.post(
+        f'/family_trees/{ft_id}/family_tree_cells',
+        json={'name': 'John', 'surnames': 'Smith', 'generation': 1},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.get_json()['data']['comments'] is None
+
+
 def test_create_family_tree_cell_invalid_date(client, auth_headers, created_family_tree):
     ft_id = created_family_tree['id_family_tree']
     response = client.post(
@@ -242,6 +286,30 @@ def test_update_family_tree_cell(client, auth_headers, created_family_tree_cell)
     )
     assert response.status_code == 200
     assert response.get_json()['data']['name'] == 'Updated Name'
+
+
+def test_update_family_tree_cell_birthday_null(client, auth_headers, created_family_tree_cell):
+    cell_id = created_family_tree_cell['id_family_tree_cell']
+    ft_id = created_family_tree_cell['id_family_tree']
+    response = client.put(
+        f'/family_trees/{ft_id}/family_tree_cells/{cell_id}',
+        json={'name': 'John', 'surnames': 'Smith', 'birthday': None, 'deathday': None, 'jobs': '', 'comments': '', 'generation': 1},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.get_json()['data']['birthday'] is None
+
+
+def test_update_family_tree_cell_birthday_null_string(client, auth_headers, created_family_tree_cell):
+    cell_id = created_family_tree_cell['id_family_tree_cell']
+    ft_id = created_family_tree_cell['id_family_tree']
+    response = client.put(
+        f'/family_trees/{ft_id}/family_tree_cells/{cell_id}',
+        json={'birthday': 'null'},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.get_json()['data']['birthday'] is None
 
 
 def test_update_family_tree_cell_maiden_name(client, auth_headers, created_family_tree_cell):

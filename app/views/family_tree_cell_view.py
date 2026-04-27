@@ -115,7 +115,7 @@ def get_family_tree_cells(id_family_tree: int):
 @VerifyUserAuthorized
 def create_family_tree_cell(id_family_tree: int):
     body = request.get_json() or {}
-    required = ['name', 'surnames', 'birthday', 'jobs', 'comments', 'generation']
+    required = ['name', 'surnames', 'generation']
     missing = [f for f in required if body.get(f) is None]
     if missing:
         return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
@@ -125,10 +125,10 @@ def create_family_tree_cell(id_family_tree: int):
             name=body['name'],
             maiden_name=body.get('maiden_name'),
             surnames=body['surnames'],
-            birthday=body['birthday'],
+            birthday=body.get('birthday'),
             deathday=body.get('deathday'),
-            jobs=body['jobs'],
-            comments=body['comments'],
+            jobs=body.get('jobs'),
+            comments=body.get('comments'),
             generation=body['generation']
         )
     except ValueError:
@@ -217,9 +217,9 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
             family_tree_cell.generation = data['generation']
         try:
             if 'birthday' in data:
-                family_tree_cell.birthday = datetime.strptime(data['birthday'], "%d/%m/%Y")
+                family_tree_cell.birthday = datetime.strptime(data['birthday'], "%d/%m/%Y") if data['birthday'] and data['birthday'] != 'null' else None
             if 'deathday' in data:
-                family_tree_cell.deathday = datetime.strptime(data['deathday'], "%d/%m/%Y") if data['deathday'] else None
+                family_tree_cell.deathday = datetime.strptime(data['deathday'], "%d/%m/%Y") if data['deathday'] and data['deathday'] != 'null' else None
         except ValueError:
             return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
 

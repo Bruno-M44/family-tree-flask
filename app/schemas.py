@@ -24,7 +24,7 @@ family_trees_schema = FamilyTreeSchema(many=True)
 
 
 class FamilyTreeCellSchema(ma.SQLAlchemyAutoSchema):
-    birthday = ma_fields.DateTime(allow_none=False)
+    birthday = ma_fields.DateTime(allow_none=True)
     deathday = ma_fields.DateTime(allow_none=True)
 
     class Meta:

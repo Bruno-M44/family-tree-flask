@@ -109,9 +109,9 @@ class FamilyTreeCell(db.Model):
     name = db.Column(EncryptedString, nullable=False)
     maiden_name = db.Column(EncryptedString, nullable=True)
     surnames = db.Column(EncryptedString, nullable=False)
-    birthday = db.Column(EncryptedDateTime, nullable=False)
-    jobs = db.Column(EncryptedString, nullable=False)
-    comments = db.Column(EncryptedString, nullable=False)
+    birthday = db.Column(EncryptedDateTime, nullable=True)
+    jobs = db.Column(EncryptedString, nullable=True)
+    comments = db.Column(EncryptedString, nullable=True)
     deathday = db.Column(EncryptedDateTime, nullable=True)
     generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
@@ -147,18 +147,18 @@ class FamilyTreeCell(db.Model):
         self,
         name: str,
         surnames: str,
-        birthday: str,
-        jobs: str,
-        comments: str,
         generation: int,
+        birthday: str = None,
         deathday: str = None,
-        maiden_name: str = None
+        maiden_name: str = None,
+        jobs: str = None,
+        comments: str = None
         ):
         self.name = name
         self.maiden_name = maiden_name
         self.surnames = surnames
-        self.birthday = datetime.strptime(birthday, "%d/%m/%Y")
-        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else None
+        self.birthday = datetime.strptime(birthday, "%d/%m/%Y") if birthday and birthday != 'null' else None
+        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday and deathday != 'null' else None
         self.jobs = jobs
         self.comments = comments
         self.generation = generation
@@ -198,8 +198,8 @@ class Pet(db.Model):
     def __init__(self, name: str, species: str, birthday: str, deathday: str, comments: str):
         self.name = name
         self.species = species
-        self.birthday = datetime.strptime(birthday, "%d/%m/%Y") if birthday else None
-        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday else None
+        self.birthday = datetime.strptime(birthday, "%d/%m/%Y") if birthday and birthday != 'null' else None
+        self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday and deathday != 'null' else None
         self.comments = comments
 
 
