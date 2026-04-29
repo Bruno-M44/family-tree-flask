@@ -1,8 +1,9 @@
 from flask import jsonify, make_response, request, Blueprint
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required
 from werkzeug.security import check_password_hash
 
-from ..models import User
+from .. import db
+from ..models import TokenBlocklist, User
 
 
 login_app = Blueprint("login_app", __name__)
@@ -27,6 +28,15 @@ def login():
         "data": result
     }
     return make_response(jsonify(data), data["status"])
+
+
+@login_app.route("/logout", methods=["DELETE"], endpoint="logout")
+@jwt_required()
+def logout():
+    jti = get_jwt()["jti"]
+    db.session.add(TokenBlocklist(jti=jti))
+    db.session.commit()
+    return make_response(jsonify({"message": "Logged out", "status": 200}), 200)
 
 
 @login_app.route("/refresh", methods=["POST"], endpoint="refresh")

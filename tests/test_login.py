@@ -37,3 +37,26 @@ def test_login_unverified(client):
     response = client.post('/login', json=USER_1)
     assert response.status_code == 403
     assert response.get_json()['message'] == 'Email not verified'
+
+
+def test_logout_success(client, auth_headers):
+    response = client.delete('/logout', headers=auth_headers)
+    assert response.status_code == 200
+    assert response.get_json()['message'] == 'Logged out'
+
+
+def test_logout_token_revoked(client, auth_headers):
+    client.delete('/logout', headers=auth_headers)
+    response = client.delete('/logout', headers=auth_headers)
+    assert response.status_code == 401
+
+
+def test_logout_requires_auth(client):
+    response = client.delete('/logout')
+    assert response.status_code == 401
+
+
+def test_token_rejected_after_logout(client, auth_headers):
+    client.delete('/logout', headers=auth_headers)
+    response = client.get('/user', headers=auth_headers)
+    assert response.status_code == 401

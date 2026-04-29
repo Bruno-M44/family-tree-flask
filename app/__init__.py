@@ -35,6 +35,11 @@ def create_app(test_config=None):
     jwt.init_app(app)
     ma.init_app(app)
 
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        from app.models import TokenBlocklist
+        return TokenBlocklist.query.filter_by(jti=jwt_payload["jti"]).first() is not None
+
     from app.views.login_view import login_app
     from app.views.user_view import user_app
     from app.views.family_tree_view import family_tree_app

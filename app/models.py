@@ -49,6 +49,13 @@ association_couple = db.Table(
 )
 
 
+class TokenBlocklist(db.Model):
+    """Revoked JWT tokens (identified by jti)."""
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), nullable=False, index=True, unique=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
 class FamilyTreeInvitation(db.Model):
     """Pending invitation to join a family tree for a non-registered email."""
     id_invitation = db.Column(db.Integer, primary_key=True)
