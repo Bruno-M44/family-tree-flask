@@ -87,7 +87,7 @@ def _send(to_email: str, subject: str, html: str, log_fallback: str) -> None:
     """Send an email via Resend or log the fallback URL in dev mode."""
     api_key: str = current_app.config.get('RESEND_API_KEY')
     if not api_key:
-        logging.warning("[DEV] Email not sent to %s. %s", to_email, log_fallback)
+        current_app.logger.warning("[DEV] Email not sent to %s. %s", to_email, log_fallback)
         return
     resend.api_key = api_key
     try:
@@ -98,7 +98,7 @@ def _send(to_email: str, subject: str, html: str, log_fallback: str) -> None:
             "html": html,
         })
     except ResendError as err:
-        logging.error("Failed to send email to %s: %s", to_email, err)
+        current_app.logger.error("Failed to send email to %s: %s", to_email, err)
 
 
 def send_verification_email(to_email: str, token: str) -> None:
@@ -149,6 +149,28 @@ def send_member_added_email(
     )
     _send(to_email, f"Vous avez été ajouté à l'arbre « {tree_title} »", html,
           f"Member added to tree '{tree_title}'")
+
+
+def send_platform_invitation_email(to_email: str, inviter_name: str) -> None:
+    """Invite a person to create an account on Family Tree."""
+    frontend_url: str = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
+    register_url: str = f"{frontend_url}/register"
+
+    body = f"""
+        <p>Bonjour,</p>
+        <p><strong>{inviter_name}</strong> vous invite à rejoindre <strong>Family Tree</strong>,
+           l'application de création d'arbres généalogiques.</p>
+        <p>Créez votre compte gratuitement pour commencer à explorer et partager l'histoire de votre famille.</p>
+    """
+    html = _build_html(
+        header_title="Vous êtes invité sur Family Tree !",
+        header_subtitle=f"Invitation de {inviter_name}",
+        body=body,
+        btn_label="Créer mon compte",
+        btn_url=register_url,
+    )
+    _send(to_email, "Vous êtes invité sur Family Tree", html,
+          f"Platform invitation link: {register_url}")
 
 
 def send_member_invitation_email(

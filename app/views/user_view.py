@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from .utils import allowed_file
-from ..models import User, FamilyTree, FamilyTreeInvitation, association_user_ft, FamilyTreeCell, Picture, Pet, PetPicture
+from ..models import User, FamilyTree, FamilyTreeInvitation, association_user_ft, FamilyTreeCell, Picture, Pet, PetPicture, association_parent_child, association_couple
 from ..schemas import user_schema, family_tree_schema
 from ..demo.creator import create_demo_family_tree
 from datetime import datetime, timedelta, timezone
@@ -646,6 +646,19 @@ def delete_user():
                         f"/{pet.id_pet}/{pet_pic.filename}"
                     )
 
+            if cell_ids:
+                db.session.execute(
+                    association_parent_child.delete().where(
+                        association_parent_child.c.id_family_tree_cell_parent.in_(cell_ids) |
+                        association_parent_child.c.id_family_tree_cell_child.in_(cell_ids)
+                    )
+                )
+                db.session.execute(
+                    association_couple.delete().where(
+                        association_couple.c.id_family_tree_cell_couple_1.in_(cell_ids) |
+                        association_couple.c.id_family_tree_cell_couple_2.in_(cell_ids)
+                    )
+                )
             Picture.query.filter(
                 Picture.id_family_tree_cell.in_(cell_ids)
             ).delete(synchronize_session=False)

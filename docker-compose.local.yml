@@ -6,6 +6,8 @@ services:
       - ./:/app      # Monte le code local pour le développement à chaud
     environment:
       - CORS_ORIGINS=http://localhost:5173
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - FLASK_DEBUG=1
 
   flask_db:
     ports:
