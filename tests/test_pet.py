@@ -90,7 +90,7 @@ def test_create_pet_missing_fields(client, auth_headers, created_family_tree_cel
     cell_id = created_family_tree_cell['id_family_tree_cell']
     response = client.post(
         f'/family_tree_cells/{cell_id}/pets',
-        json={'name': 'Buddy'},
+        json={},
         headers=auth_headers,
     )
     assert response.status_code == 400
