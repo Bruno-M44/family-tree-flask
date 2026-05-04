@@ -42,7 +42,7 @@ def get_pets(id_family_tree_cell: int):
 def create_pet(id_family_tree_cell: int):
     '''create_pet endpoint'''
     body = request.get_json() or {}
-    required = ['name', 'species']
+    required = ['name']
     missing = [f for f in required if not body.get(f)]
     if missing:
         return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
@@ -50,7 +50,7 @@ def create_pet(id_family_tree_cell: int):
     try:
         new_pet = Pet(
             name=body['name'],
-            species=body['species'],
+            species=body.get('species'),
             birthday=body.get('birthday'),
             deathday=body.get('deathday'),
             comments=body.get('comments')

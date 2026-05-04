@@ -74,6 +74,12 @@ def get_update_delete_pet_picture(id_pet: int, id_pet_picture: int):
                 pet_picture.picture_date = datetime.strptime(data['picture_date'], "%d/%m/%Y") if data['picture_date'] else None
         except ValueError:
             return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
+        if data.get('is_main'):
+            PetPicture.query.filter(
+                PetPicture.id_pet == id_pet,
+                PetPicture.id_pet_picture != id_pet_picture
+            ).update({"is_main": False})
+            pet_picture.is_main = True
 
         try:
             db.session.commit()
@@ -169,11 +175,6 @@ def upload_pet_picture(id_pet: int):
     if not allowed_file(file.filename):
         return make_response(jsonify({"message": "File not allowed", "status": 400}), 400)
 
-    required_fields = ['picture_date', 'comments']
-    missing = [f for f in required_fields if f not in request.form]
-    if missing:
-        return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
-
     pet, id_family_tree_cell, id_family_tree, err = _get_pet_path(id_pet)
     if err:
         return err
@@ -182,10 +183,14 @@ def upload_pet_picture(id_pet: int):
     os.makedirs(f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}", exist_ok=True)
     file.save(f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{filename}")
 
+    is_main = request.form.get("is_main", "false").lower() == "true"
+    if is_main:
+        PetPicture.query.filter_by(id_pet=id_pet).update({"is_main": False})
     new_pet_picture = PetPicture(
         filename=filename,
-        picture_date=request.form["picture_date"],
-        comments=request.form["comments"]
+        picture_date=request.form.get("picture_date"),
+        comments=request.form.get("comments"),
+        is_main=is_main
     )
     pet.pets_pictures.append(new_pet_picture)
     try:

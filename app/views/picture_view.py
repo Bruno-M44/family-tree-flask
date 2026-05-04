@@ -181,7 +181,7 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
     if not (file and allowed_file(file.filename)):
         return make_response(jsonify({"message": "File not allowed", "status": 400}), 400)
 
-    required_fields = ['picture_date', 'comments', 'header_picture']
+    required_fields = ['header_picture']
     missing = [f for f in required_fields if f not in request.form]
     if missing:
         return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
@@ -193,8 +193,8 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
     family_tree_cell = db.session.get(FamilyTreeCell, id_family_tree_cell)
     new_picture = Picture(
         filename=filename,
-        picture_date=request.form["picture_date"],
-        comments=request.form["comments"],
+        picture_date=request.form.get("picture_date"),
+        comments=request.form.get("comments"),
         header_picture=request.form["header_picture"]
     )
     family_tree_cell.pictures.append(new_picture)

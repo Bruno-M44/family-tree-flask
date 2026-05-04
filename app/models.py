@@ -184,7 +184,7 @@ class Picture(db.Model):
 
     def __init__(self, filename: str, picture_date: str, comments: str, header_picture: str):
         self.filename = filename
-        self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y")
+        self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y") if picture_date else None
         self.comments = comments
         self.header_picture = str(header_picture).strip().lower() == 'true'
 
@@ -194,7 +194,7 @@ class Pet(db.Model):
     # query: db.Query  # autocomplete
     id_pet = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
-    species = db.Column(db.String, nullable=False)
+    species = db.Column(db.String, nullable=True)
     birthday = db.Column(db.DateTime, nullable=True)
     deathday = db.Column(db.DateTime, nullable=True)
     comments = db.Column(db.String, nullable=True)
@@ -202,7 +202,7 @@ class Pet(db.Model):
         db.ForeignKey("family_tree_cell.id_family_tree_cell", ondelete="CASCADE"))
     pets_pictures = db.relationship("PetPicture", backref=db.backref("pet"))
 
-    def __init__(self, name: str, species: str, birthday: str, deathday: str, comments: str):
+    def __init__(self, name: str, species: str | None, birthday: str, deathday: str, comments: str):
         self.name = name
         self.species = species
         self.birthday = datetime.strptime(birthday, "%d/%m/%Y") if birthday and birthday != 'null' else None
@@ -217,13 +217,15 @@ class PetPicture(db.Model):
     filename = db.Column(db.String, nullable=False)
     picture_date = db.Column(db.DateTime, nullable=True)
     comments = db.Column(db.String, nullable=True)
+    is_main = db.Column(db.Boolean, nullable=False, default=False)
     id_pet = db.Column(
         db.ForeignKey("pet.id_pet", ondelete="CASCADE"))
 
-    def __init__(self, filename: str, picture_date: str, comments: str):
+    def __init__(self, filename: str, picture_date: str, comments: str, is_main: bool = False):
         self.filename = filename
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y") if picture_date else None
         self.comments = comments
+        self.is_main = is_main
 
 
 def create_all():
