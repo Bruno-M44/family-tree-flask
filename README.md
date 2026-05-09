@@ -11,6 +11,7 @@ API REST pour la gestion d'arbres généalogiques. Partie back-end d'une applica
 | ORM | SQLAlchemy 2.x + Flask-SQLAlchemy |
 | Authentification | JWT (Flask-JWT-Extended) |
 | Sérialisation | Marshmallow + marshmallow-sqlalchemy |
+| Détection faciale | MediaPipe (BlazeFace) + OpenCV |
 | Conteneurisation | Docker + Docker Compose |
 | CI/CD | GitHub Actions |
 
@@ -19,7 +20,7 @@ API REST pour la gestion d'arbres généalogiques. Partie back-end d'une applica
 ## Prérequis
 
 - Docker et Docker Compose
-- Python 3.12+ (pour le développement local et les tests)
+- Python 3.14+ (pour le développement local et les tests)
 - Git
 
 ---
@@ -67,6 +68,24 @@ L'API est disponible sur `http://localhost:4000`.
 ```bash
 docker exec -it flask_app flask command_app init-db
 ```
+
+### Jouer les migrations
+
+```bash
+for f in migrations/*.sql; do
+  docker exec -i flask_db psql -U postgres -d postgres < "$f"
+done
+```
+
+### Détecter les visages sur les photos existantes
+
+À lancer après les migrations pour rétroactivement traiter les photos déjà en base :
+
+```bash
+docker exec flask_app flask command_app detect-faces
+```
+
+Cette commande ne retraite que les photos dont les coordonnées de visage sont absentes — elle est safe à relancer plusieurs fois.
 
 ### Arrêter l'application
 
@@ -154,10 +173,12 @@ Tous les endpoints protégés requièrent un header `Authorization: Bearer <toke
 
 ### Photos
 
+La détection faciale est automatiquement exécutée à l'upload. Les champs `face_x`, `face_y`, `face_width`, `face_height` (coordonnées en pixels du visage le plus grand détecté) sont retournés dans la réponse, ou `null` si aucun visage n'est détecté.
+
 | Méthode | Endpoint | Description | Auth |
 |---|---|---|---|
 | `GET` | `/family_tree_cells/<id>/pictures` | Lister les photos | Oui |
-| `POST` | `/family_trees/<id>/family_tree_cells/<id>/pictures` | Uploader une photo | Oui |
+| `POST` | `/family_trees/<id>/family_tree_cells/<id>/pictures` | Uploader une photo (détection faciale auto) | Oui |
 | `GET` | `/family_trees/<id>/family_tree_cells/<id>/pictures/<id>` | Détail d'une photo | Oui |
 | `PUT` | `/family_trees/<id>/family_tree_cells/<id>/pictures/<id>` | Modifier une photo | Oui |
 | `GET` | `/family_trees/<id>/family_tree_cells/<id>/pictures/<id>/secure` | Télécharger une photo | Oui |
@@ -192,6 +213,8 @@ Le déploiement est automatisé via GitHub Actions au push sur `main`.
 Le pipeline :
 1. Lance les tests
 2. Si les tests passent, déploie sur le VPS via SSH
+3. Joue les migrations SQL
+4. Lance `detect-faces` pour traiter les photos sans coordonnées de visage
 
 Les secrets à configurer dans GitHub Actions :
 

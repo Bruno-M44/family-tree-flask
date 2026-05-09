@@ -179,6 +179,10 @@ class Picture(db.Model):
     picture_date = db.Column(db.DateTime, nullable=False)
     comments = db.Column(db.String, nullable=False)
     header_picture = db.Column(db.Boolean, default=False)
+    face_x = db.Column(db.Integer, nullable=True)
+    face_y = db.Column(db.Integer, nullable=True)
+    face_width = db.Column(db.Integer, nullable=True)
+    face_height = db.Column(db.Integer, nullable=True)
     id_family_tree_cell = db.Column(
         db.ForeignKey("family_tree_cell.id_family_tree_cell", ondelete="CASCADE"))
 
@@ -218,6 +222,10 @@ class PetPicture(db.Model):
     picture_date = db.Column(db.DateTime, nullable=True)
     comments = db.Column(db.String, nullable=True)
     is_main = db.Column(db.Boolean, nullable=False, default=False)
+    face_x = db.Column(db.Integer, nullable=True)
+    face_y = db.Column(db.Integer, nullable=True)
+    face_width = db.Column(db.Integer, nullable=True)
+    face_height = db.Column(db.Integer, nullable=True)
     id_pet = db.Column(
         db.ForeignKey("pet.id_pet", ondelete="CASCADE"))
 

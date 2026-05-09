@@ -1,6 +1,19 @@
-FROM python:3.12.3-alpine
+FROM python:3.14-slim
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxcb1 \
+    libgl1 \
+    libglib2.0-0 \
+    libgles2 \
+    libegl1 \
+    wget \
+    && mkdir -p /opt/models \
+    && wget -q -O /opt/models/blaze_face_short_range.tflite \
+    https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite \
+    && apt-get purge -y wget \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements-dev.txt ./
 

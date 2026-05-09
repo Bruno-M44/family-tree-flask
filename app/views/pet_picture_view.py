@@ -12,7 +12,7 @@ from app import db
 from ..models import Pet, PetPicture, FamilyTreeCell
 from ..schemas import pet_picture_schema, pets_pictures_schema
 from .verify_user_authorized import VerifyUserAuthorized
-from .utils import allowed_file
+from .utils import allowed_file, detect_face
 
 pet_picture_app = Blueprint("pet_picture_app", __name__)
 
@@ -181,7 +181,10 @@ def upload_pet_picture(id_pet: int):
 
     filename = secure_filename(str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower())
     os.makedirs(f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}", exist_ok=True)
-    file.save(f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{filename}")
+    filepath = f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{filename}"
+    file.save(filepath)
+
+    face = detect_face(filepath)
 
     is_main = request.form.get("is_main", "false").lower() == "true"
     if is_main:
@@ -192,6 +195,8 @@ def upload_pet_picture(id_pet: int):
         comments=request.form.get("comments"),
         is_main=is_main
     )
+    if face:
+        new_pet_picture.face_x, new_pet_picture.face_y, new_pet_picture.face_width, new_pet_picture.face_height = face
     pet.pets_pictures.append(new_pet_picture)
     try:
         db.session.commit()

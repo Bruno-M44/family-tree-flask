@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from ..models import FamilyTreeCell, Picture
 from ..schemas import pictures_schema, picture_schema
 from .verify_user_authorized import VerifyUserAuthorized
-from .utils import allowed_file
+from .utils import allowed_file, detect_face
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
 
@@ -188,7 +188,10 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
 
     filename = secure_filename(str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower())
     os.makedirs(f"/pictures/{id_family_tree}/{id_family_tree_cell}", exist_ok=True)
-    file.save(f"/pictures/{id_family_tree}/{id_family_tree_cell}/{filename}")
+    filepath = f"/pictures/{id_family_tree}/{id_family_tree_cell}/{filename}"
+    file.save(filepath)
+
+    face = detect_face(filepath)
 
     family_tree_cell = db.session.get(FamilyTreeCell, id_family_tree_cell)
     new_picture = Picture(
@@ -197,6 +200,8 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
         comments=request.form.get("comments"),
         header_picture=request.form["header_picture"]
     )
+    if face:
+        new_picture.face_x, new_picture.face_y, new_picture.face_width, new_picture.face_height = face
     family_tree_cell.pictures.append(new_picture)
     try:
         db.session.commit()

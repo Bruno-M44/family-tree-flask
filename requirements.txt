@@ -10,3 +10,5 @@ psycopg[binary]
 python-dotenv
 cryptography
 resend
+opencv-python-headless
+mediapipe

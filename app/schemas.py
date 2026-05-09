@@ -40,7 +40,7 @@ class PictureSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Picture
         include_fk = True
-        fields = ("id_picture", "filename", "picture_date", "comments", "header_picture", "id_family_tree_cell")
+        fields = ("id_picture", "filename", "picture_date", "comments", "header_picture", "face_x", "face_y", "face_width", "face_height", "id_family_tree_cell")
 
 
 picture_schema = PictureSchema()
@@ -62,7 +62,7 @@ class PetPictureSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = PetPicture
         include_fk = True
-        fields = ("id_pet_picture", "filename", "picture_date", "comments", "is_main", "id_pet")
+        fields = ("id_pet_picture", "filename", "picture_date", "comments", "is_main", "face_x", "face_y", "face_width", "face_height", "id_pet")
 
 
 pet_picture_schema = PetPictureSchema()
