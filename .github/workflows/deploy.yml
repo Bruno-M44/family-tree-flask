@@ -54,4 +54,4 @@ jobs:
             docker exec -i flask_db psql -U postgres -d postgres < migrations/005_pet_picture_is_main.sql
             docker exec -i flask_db psql -U postgres -d postgres < migrations/006_picture_nullable_fields.sql
             docker exec -i flask_db psql -U postgres -d postgres < migrations/007_face_detection.sql
-            docker exec flask_app flask command detect-faces
+            docker exec flask_app flask command_app detect-faces
