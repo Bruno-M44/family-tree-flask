@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir -p /opt/models \
     && wget -q -O /opt/models/blaze_face_short_range.tflite \
     https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite \
+    && wget -q -O /opt/models/blaze_face_full_range.tflite \
+    https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite \
     && apt-get purge -y wget \
     && rm -rf /var/lib/apt/lists/*
 

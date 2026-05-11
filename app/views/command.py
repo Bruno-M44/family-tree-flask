@@ -48,7 +48,7 @@ def detect_faces():
     db.session.commit()
     click.echo(f"Pictures updated: {updated}")
 
-    pet_pictures = PetPicture.query.filter(PetPicture.face_x.is_(None)).all()
+    pet_pictures = PetPicture.query.filter(PetPicture.face_x.is_(None), PetPicture.id_pet.isnot(None)).all()
     click.echo(f"Pet pictures to process: {len(pet_pictures)}")
     updated = 0
     for pet_picture in pet_pictures:
