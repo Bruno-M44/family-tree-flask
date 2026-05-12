@@ -561,10 +561,14 @@ def upload_avatar() -> Response:
             pass
 
     filename: str = secure_filename(str(uuid.uuid4()) + "." + file.filename.rsplit(".", 1)[1].lower())
+    filepath: str = f"/avatars/{current_user}/{filename}"
     os.makedirs(f"/avatars/{current_user}", exist_ok=True)
-    file.save(f"/avatars/{current_user}/{filename}")
+    file.save(filepath)
 
+    from .utils import detect_face
+    face = detect_face(filepath)
     user.avatar = filename
+    user.avatar_face_x, user.avatar_face_y, user.avatar_face_width, user.avatar_face_height = face if face else (None, None, None, None)
     try:
         db.session.commit()
     except SQLAlchemyError as err:
@@ -590,6 +594,10 @@ def delete_avatar() -> Response:
         pass
 
     user.avatar = None
+    user.avatar_face_x = None
+    user.avatar_face_y = None
+    user.avatar_face_width = None
+    user.avatar_face_height = None
     try:
         db.session.commit()
     except SQLAlchemyError as err:

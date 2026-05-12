@@ -7,7 +7,7 @@ from app.models import User, FamilyTree, FamilyTreeCell, Picture, Pet, PetPictur
 class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        fields = ("id_user", "name", "surname", "email", "verified", "avatar")
+        fields = ("id_user", "name", "surname", "email", "verified", "avatar", "avatar_face_x", "avatar_face_y", "avatar_face_width", "avatar_face_height")
 
 
 user_schema = UserSchema()

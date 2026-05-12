@@ -81,6 +81,10 @@ class User(db.Model):
     verified = db.Column(db.Boolean, nullable=False, default=False)
     verification_token = db.Column(db.String, nullable=True)
     avatar = db.Column(db.String, nullable=True)
+    avatar_face_x = db.Column(db.Integer, nullable=True)
+    avatar_face_y = db.Column(db.Integer, nullable=True)
+    avatar_face_width = db.Column(db.Integer, nullable=True)
+    avatar_face_height = db.Column(db.Integer, nullable=True)
     family_trees = db.relationship(
         "FamilyTree",
         secondary=association_user_ft,
