@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch
 from cryptography.fernet import Fernet
 
-from run import create_app
+from app import create_app
 from app import db as _db
 
 
