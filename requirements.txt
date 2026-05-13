@@ -1,5 +1,6 @@
 Flask
 Flask-Cors
+gunicorn
 Flask-JWT-Extended
 flask-marshmallow
 Flask-SQLAlchemy
