@@ -8,24 +8,33 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 _MODEL_SHORT = "/opt/models/blaze_face_short_range.tflite"
 _MODEL_FULL = "/opt/models/blaze_face_full_range.tflite"
 
+# Détecteurs chargés une seule fois par processus pour éviter de relire le modèle .tflite à chaque upload
+_detector_cache: dict = {}
+
+
+def _get_detector(model_path: str) -> FaceDetector:
+    if model_path not in _detector_cache:
+        options = FaceDetectorOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=model_path),
+            running_mode=RunningMode.IMAGE,
+            min_detection_confidence=0.5,
+        )
+        _detector_cache[model_path] = FaceDetector.create_from_options(options)
+    return _detector_cache[model_path]
+
 
 def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def _mediapipe_detect(image_path: str, model_path: str, min_confidence: float = 0.5) -> tuple[int, int, int, int] | None:
+def _mediapipe_detect(image_path: str, model_path: str) -> tuple[int, int, int, int] | None:
     img = cv2.imread(image_path)
     if img is None:
         return None
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_rgb)
-    options = FaceDetectorOptions(
-        base_options=mp_python.BaseOptions(model_asset_path=model_path),
-        running_mode=RunningMode.IMAGE,
-        min_detection_confidence=min_confidence,
-    )
-    with FaceDetector.create_from_options(options) as detector:
-        result = detector.detect(mp_image)
+    detector = _get_detector(model_path)
+    result = detector.detect(mp_image)
     if not result.detections:
         return None
     largest = max(result.detections, key=lambda d: d.bounding_box.width * d.bounding_box.height)
@@ -50,9 +59,13 @@ def detect_face(image_path: str) -> tuple[int, int, int, int] | None:
     """Return (x, y, width, height) in pixels of the largest detected face, or None.
 
     Strategy: BlazeFace short-range → BlazeFace full-range → OpenCV Haar cascade.
+    Returns None on any error so callers never crash on face detection failure.
     """
-    return (
-        _mediapipe_detect(image_path, _MODEL_SHORT)
-        or _mediapipe_detect(image_path, _MODEL_FULL)
-        or _haar_detect(image_path)
-    )
+    try:
+        return (
+            _mediapipe_detect(image_path, _MODEL_SHORT)
+            or _mediapipe_detect(image_path, _MODEL_FULL)
+            or _haar_detect(image_path)
+        )
+    except Exception:
+        return None

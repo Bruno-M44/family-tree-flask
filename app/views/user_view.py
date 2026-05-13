@@ -566,7 +566,10 @@ def upload_avatar() -> Response:
     file.save(filepath)
 
     from .utils import detect_face
-    face = detect_face(filepath)
+    try:
+        face = detect_face(filepath)
+    except Exception:
+        face = None
     user.avatar = filename
     user.avatar_face_x, user.avatar_face_y, user.avatar_face_width, user.avatar_face_height = face if face else (None, None, None, None)
     try:

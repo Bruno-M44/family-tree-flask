@@ -191,7 +191,10 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
     filepath = f"/pictures/{id_family_tree}/{id_family_tree_cell}/{filename}"
     file.save(filepath)
 
-    face = detect_face(filepath)
+    try:
+        face = detect_face(filepath)
+    except Exception:
+        face = None
 
     family_tree_cell = db.session.get(FamilyTreeCell, id_family_tree_cell)
     new_picture = Picture(
