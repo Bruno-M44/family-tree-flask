@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import logging as lg
 
 from sqlalchemy import insert
+from sqlalchemy.dialects.postgresql import ARRAY
 from werkzeug.security import generate_password_hash
 from app import db
 from app.encryption import EncryptedString, EncryptedDateTime
@@ -238,6 +239,28 @@ class PetPicture(db.Model):
         self.picture_date = datetime.strptime(picture_date, "%d/%m/%Y") if picture_date else None
         self.comments = comments
         self.is_main = is_main
+
+
+class FamilyTreeHiddenBranches(db.Model):
+    """Branches masquées par utilisateur et par arbre généalogique."""
+    __tablename__ = "family_tree_hidden_branches"
+    id_user = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id_user", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    id_family_tree = db.Column(
+        db.Integer,
+        db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    hidden_above = db.Column(ARRAY(db.Integer), nullable=False, default=list)
+    hidden_below = db.Column(ARRAY(db.Integer), nullable=False, default=list)
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
 
 def create_all():

@@ -8,6 +8,7 @@ services:
       - CORS_ORIGINS=http://localhost:5173
       - RESEND_API_KEY=${RESEND_API_KEY}
       - FLASK_DEBUG=1
+    command: ["gunicorn", "--workers=2", "--bind=0.0.0.0:4000", "--timeout=120", "--access-logfile=-", "run:app"]
 
   flask_db:
     ports:
