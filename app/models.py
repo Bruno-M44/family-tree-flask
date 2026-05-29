@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import logging as lg
 
 from sqlalchemy import insert
-from sqlalchemy.dialects.postgresql import ARRAY
 from werkzeug.security import generate_password_hash
 from app import db
 from app.encryption import EncryptedString, EncryptedDateTime
@@ -254,8 +253,8 @@ class FamilyTreeHiddenBranches(db.Model):
         db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"),
         primary_key=True,
     )
-    hidden_above = db.Column(ARRAY(db.Integer), nullable=False, default=list)
-    hidden_below = db.Column(ARRAY(db.Integer), nullable=False, default=list)
+    hidden_above = db.Column(db.JSON, nullable=False, default=list)
+    hidden_below = db.Column(db.JSON, nullable=False, default=list)
     updated_at = db.Column(
         db.DateTime,
         nullable=False,

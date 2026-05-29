@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import FamilyTree, FamilyTreeCell, FamilyTreeHiddenBranches, association_user_ft
@@ -60,22 +59,24 @@ def hidden_branches(id_family_tree: int):
             return make_response(jsonify({"message": f"Unknown cell IDs for this tree: {sorted(invalid)}"}), 400)
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    stmt = pg_insert(FamilyTreeHiddenBranches).values(
-        id_user=current_user,
-        id_family_tree=id_family_tree,
-        hidden_above=hidden_above,
-        hidden_below=hidden_below,
-        updated_at=now,
-    ).on_conflict_do_update(
-        index_elements=["id_user", "id_family_tree"],
-        set_={
-            "hidden_above": hidden_above,
-            "hidden_below": hidden_below,
-            "updated_at": now,
-        },
-    )
+    row = FamilyTreeHiddenBranches.query.filter_by(
+        id_user=current_user, id_family_tree=id_family_tree
+    ).first()
+    if row:
+        row.hidden_above = hidden_above
+        row.hidden_below = hidden_below
+        row.updated_at = now
+    else:
+        row = FamilyTreeHiddenBranches(
+            id_user=current_user,
+            id_family_tree=id_family_tree,
+            hidden_above=hidden_above,
+            hidden_below=hidden_below,
+            updated_at=now,
+        )
+        db.session.add(row)
+
     try:
-        db.session.execute(stmt)
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
