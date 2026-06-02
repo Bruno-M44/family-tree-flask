@@ -124,6 +124,7 @@ class FamilyTreeCell(db.Model):
     jobs = db.Column(EncryptedString, nullable=True)
     comments = db.Column(EncryptedString, nullable=True)
     deathday = db.Column(EncryptedDateTime, nullable=True)
+    sexe = db.Column(db.String(2), nullable=True, default='ND')
     generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
     pictures = db.relationship("Picture", backref=db.backref("family_tree_cell"))
@@ -163,7 +164,8 @@ class FamilyTreeCell(db.Model):
         deathday: str = None,
         maiden_name: str = None,
         jobs: str = None,
-        comments: str = None
+        comments: str = None,
+        sexe: str = 'ND',
         ):
         self.name = name
         self.maiden_name = maiden_name
@@ -172,6 +174,7 @@ class FamilyTreeCell(db.Model):
         self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday and deathday != 'null' else None
         self.jobs = jobs
         self.comments = comments
+        self.sexe = sexe
         self.generation = generation
 
 

@@ -30,7 +30,7 @@ class FamilyTreeCellSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = FamilyTreeCell
         include_fk = True
-        fields = ("id_family_tree_cell", "name", "maiden_name", "surnames", "birthday", "deathday", "jobs", "comments", "generation", "id_family_tree")
+        fields = ("id_family_tree_cell", "name", "maiden_name", "surnames", "birthday", "deathday", "jobs", "comments", "generation", "id_family_tree", "sexe")
 
 
 family_tree_cell_schema = FamilyTreeCellSchema()

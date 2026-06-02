@@ -129,7 +129,8 @@ def create_family_tree_cell(id_family_tree: int):
             deathday=body.get('deathday'),
             jobs=body.get('jobs'),
             comments=body.get('comments'),
-            generation=body['generation']
+            generation=body['generation'],
+            sexe=body.get('sexe', 'ND'),
         )
     except ValueError:
         return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
@@ -213,6 +214,8 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
             family_tree_cell.jobs = data['jobs']
         if 'comments' in data:
             family_tree_cell.comments = data['comments']
+        if 'sexe' in data:
+            family_tree_cell.sexe = data['sexe'] if data['sexe'] in ('M', 'F', 'ND') else 'ND'
         if 'generation' in data:
             family_tree_cell.generation = data['generation']
         try:
