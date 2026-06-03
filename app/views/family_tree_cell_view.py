@@ -61,7 +61,7 @@ def get_family_tree_cells(id_family_tree: int):
     for row in couple_rows:
         id1 = row.id_family_tree_cell_couple_1
         id2 = row.id_family_tree_cell_couple_2
-        info = {"start_union": row.start_union, "end_union": row.end_union}
+        info = {"start_union": row.start_union, "end_union": row.end_union, "type_union": row.type_union, "place_union": row.place_union}
         if id1 in cell_map:
             couples_by_cell.setdefault(id1, []).append({**info, "partner_id": id2})
         if id2 in cell_map:
@@ -90,7 +90,8 @@ def get_family_tree_cells(id_family_tree: int):
         ]
         cell_result["couples"] = [
             family_tree_cell_schema.dump(cell_map[c["partner_id"]]) | {
-                "start_union": c["start_union"], "end_union": c["end_union"]
+                "start_union": c["start_union"], "end_union": c["end_union"],
+                "type_union": c["type_union"], "place_union": c["place_union"],
             }
             for c in couples_by_cell.get(cid, [])
             if c["partner_id"] in cell_map
@@ -129,7 +130,17 @@ def create_family_tree_cell(id_family_tree: int):
             deathday=body.get('deathday'),
             jobs=body.get('jobs'),
             comments=body.get('comments'),
+            biography=body.get('biography'),
             generation=body['generation'],
+            alias=body.get('alias'),
+            nationality=body.get('nationality'),
+            baptism_date=body.get('baptism_date'),
+            baptism_place=body.get('baptism_place'),
+            burial_date=body.get('burial_date'),
+            burial_place=body.get('burial_place'),
+            burial_type=body.get('burial_type'),
+            education=body.get('education'),
+            military_service=body.get('military_service'),
             sexe=body.get('sexe', 'ND'),
             birth_place=body.get('birth_place'),
             death_place=body.get('death_place'),
@@ -216,12 +227,28 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
             family_tree_cell.jobs = data['jobs']
         if 'comments' in data:
             family_tree_cell.comments = data['comments']
+        if 'biography' in data:
+            family_tree_cell.biography = data['biography'] or None
         if 'sexe' in data:
             family_tree_cell.sexe = data['sexe'] if data['sexe'] in ('M', 'F', 'ND') else 'ND'
         if 'birth_place' in data:
             family_tree_cell.birth_place = data['birth_place'] or None
         if 'death_place' in data:
             family_tree_cell.death_place = data['death_place'] or None
+        if 'alias' in data:
+            family_tree_cell.alias = data['alias'] or None
+        if 'nationality' in data:
+            family_tree_cell.nationality = data['nationality'] or None
+        if 'baptism_place' in data:
+            family_tree_cell.baptism_place = data['baptism_place'] or None
+        if 'burial_place' in data:
+            family_tree_cell.burial_place = data['burial_place'] or None
+        if 'burial_type' in data:
+            family_tree_cell.burial_type = data['burial_type'] if data['burial_type'] in ('inhumation', 'cremation', 'autre') else None
+        if 'education' in data:
+            family_tree_cell.education = data['education'] or None
+        if 'military_service' in data:
+            family_tree_cell.military_service = data['military_service'] or None
         if 'generation' in data:
             family_tree_cell.generation = data['generation']
         try:
@@ -229,6 +256,10 @@ def get_update_delete_family_tree_cell(id_family_tree: int, id_family_tree_cell:
                 family_tree_cell.birthday = datetime.strptime(data['birthday'], "%d/%m/%Y") if data['birthday'] and data['birthday'] != 'null' else None
             if 'deathday' in data:
                 family_tree_cell.deathday = datetime.strptime(data['deathday'], "%d/%m/%Y") if data['deathday'] and data['deathday'] != 'null' else None
+            if 'baptism_date' in data:
+                family_tree_cell.baptism_date = datetime.strptime(data['baptism_date'], "%d/%m/%Y") if data['baptism_date'] else None
+            if 'burial_date' in data:
+                family_tree_cell.burial_date = datetime.strptime(data['burial_date'], "%d/%m/%Y") if data['burial_date'] else None
         except ValueError:
             return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
 
@@ -304,13 +335,22 @@ def add_couple(id_family_tree: int, id_family_tree_cell: int):
     except ValueError:
         return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
 
+    type_union = None
+    place_union = None
+    if body.get("type_union") in ('mariage', 'pacs', 'union_libre', 'fiancailles', 'autre'):
+        type_union = body["type_union"]
+    if body.get("place_union"):
+        place_union = body["place_union"]
+
     try:
         db.session.execute(
             insert(association_couple).values(
                 id_family_tree_cell_couple_1=id_family_tree_cell,
                 id_family_tree_cell_couple_2=partner_id,
                 start_union=start_union,
-                end_union=end_union
+                end_union=end_union,
+                type_union=type_union,
+                place_union=place_union,
             )
         )
         db.session.commit()
@@ -365,6 +405,10 @@ def update_delete_couple(id_family_tree: int, id_family_tree_cell: int, id_partn
                 updates["end_union"] = datetime.strptime(body["end_union"], "%d/%m/%Y") if body["end_union"] else None
         except ValueError:
             return make_response(jsonify({"message": "Invalid date format, expected dd/mm/yyyy", "status": 400}), 400)
+        if "type_union" in body:
+            updates["type_union"] = body["type_union"] if body["type_union"] in ('mariage', 'pacs', 'union_libre', 'fiancailles', 'autre') else None
+        if "place_union" in body:
+            updates["place_union"] = body["place_union"] or None
 
         if not updates:
             return make_response(jsonify({"message": "No fields to update", "status": 400}), 400)
@@ -489,7 +533,9 @@ def get_couples(family_tree_cell: FamilyTreeCell) -> list:
                 if row.id_family_tree_cell_couple_1 == family_tree_cell.id_family_tree_cell
                 else row.id_family_tree_cell_couple_1,
             "start_union": row.start_union,
-            "end_union": row.end_union
+            "end_union": row.end_union,
+            "type_union": row.type_union,
+            "place_union": row.place_union,
         }
         for row in rows
     ]
@@ -500,7 +546,8 @@ def get_couples(family_tree_cell: FamilyTreeCell) -> list:
     partner_map = {p.id_family_tree_cell: p for p in partners}
     return [
         family_tree_cell_schema.dump(partner_map[p["partner_id"]]) | {
-            "start_union": p["start_union"], "end_union": p["end_union"]
+            "start_union": p["start_union"], "end_union": p["end_union"],
+            "type_union": p["type_union"], "place_union": p["place_union"],
         }
         for p in partner_data if p["partner_id"] in partner_map
     ]

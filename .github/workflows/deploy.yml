@@ -57,4 +57,7 @@ jobs:
             docker exec -i flask_db psql -U postgres -d postgres < migrations/008_user_avatar_face.sql
             docker exec -i flask_db psql -U postgres -d postgres < migrations/009_sexe.sql
             docker exec -i flask_db psql -U postgres -d postgres < migrations/010_birth_death_place.sql
+            docker exec -i flask_db psql -U postgres -d postgres < migrations/011_couple_type_place.sql
+            docker exec -i flask_db psql -U postgres -d postgres < migrations/012_biography.sql
+            docker exec -i flask_db psql -U postgres -d postgres < migrations/013_secondary_fields.sql
             docker exec flask_app flask command_app detect-faces

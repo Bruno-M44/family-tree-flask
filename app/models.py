@@ -45,7 +45,9 @@ association_couple = db.Table(
         db.ForeignKey("family_tree_cell.id_family_tree_cell"), primary_key=True
     ),
     db.Column("start_union", db.DateTime, nullable=True),
-    db.Column("end_union", db.DateTime, nullable=True)
+    db.Column("end_union", db.DateTime, nullable=True),
+    db.Column("type_union", db.String(20), nullable=True),
+    db.Column("place_union", db.Text, nullable=True),
 )
 
 
@@ -123,10 +125,20 @@ class FamilyTreeCell(db.Model):
     birthday = db.Column(EncryptedDateTime, nullable=True)
     jobs = db.Column(EncryptedString, nullable=True)
     comments = db.Column(EncryptedString, nullable=True)
+    biography = db.Column(EncryptedString, nullable=True)
     deathday = db.Column(EncryptedDateTime, nullable=True)
     sexe = db.Column(db.String(2), nullable=True, default='ND')
     birth_place = db.Column(EncryptedString, nullable=True)
     death_place = db.Column(EncryptedString, nullable=True)
+    alias = db.Column(EncryptedString, nullable=True)
+    nationality = db.Column(EncryptedString, nullable=True)
+    baptism_date = db.Column(EncryptedDateTime, nullable=True)
+    baptism_place = db.Column(EncryptedString, nullable=True)
+    burial_date = db.Column(EncryptedDateTime, nullable=True)
+    burial_place = db.Column(EncryptedString, nullable=True)
+    burial_type = db.Column(db.String(20), nullable=True)
+    education = db.Column(EncryptedString, nullable=True)
+    military_service = db.Column(EncryptedString, nullable=True)
     generation = db.Column(db.Integer)
     id_family_tree = db.Column(db.ForeignKey("family_tree.id_family_tree", ondelete="CASCADE"))
     pictures = db.relationship("Picture", backref=db.backref("family_tree_cell"))
@@ -167,9 +179,19 @@ class FamilyTreeCell(db.Model):
         maiden_name: str = None,
         jobs: str = None,
         comments: str = None,
+        biography: str = None,
         sexe: str = 'ND',
         birth_place: str = None,
         death_place: str = None,
+        alias: str = None,
+        nationality: str = None,
+        baptism_date: str = None,
+        baptism_place: str = None,
+        burial_date: str = None,
+        burial_place: str = None,
+        burial_type: str = None,
+        education: str = None,
+        military_service: str = None,
         ):
         self.name = name
         self.maiden_name = maiden_name
@@ -178,9 +200,19 @@ class FamilyTreeCell(db.Model):
         self.deathday = datetime.strptime(deathday, "%d/%m/%Y") if deathday and deathday != 'null' else None
         self.jobs = jobs
         self.comments = comments
+        self.biography = biography
         self.sexe = sexe
         self.birth_place = birth_place
         self.death_place = death_place
+        self.alias = alias
+        self.nationality = nationality
+        self.baptism_date = datetime.strptime(baptism_date, "%d/%m/%Y") if baptism_date else None
+        self.baptism_place = baptism_place
+        self.burial_date = datetime.strptime(burial_date, "%d/%m/%Y") if burial_date else None
+        self.burial_place = burial_place
+        self.burial_type = burial_type
+        self.education = education
+        self.military_service = military_service
         self.generation = generation
 
 
