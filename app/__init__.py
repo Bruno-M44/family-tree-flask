@@ -50,11 +50,13 @@ def create_app(test_config=None):
     from app.views.command import command_app
     from app.views.invitation_view import invitation_app
     from app.views.hidden_branches_view import hidden_branches_app
+    from app.views.gedcom_view import gedcom_app
 
     app.register_blueprint(login_app)
     app.register_blueprint(user_app)
     app.register_blueprint(invitation_app)
     app.register_blueprint(hidden_branches_app)
+    app.register_blueprint(gedcom_app)
     app.register_blueprint(family_tree_app)
     app.register_blueprint(family_tree_cell_app)
     app.register_blueprint(picture_app)
