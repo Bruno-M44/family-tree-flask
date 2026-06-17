@@ -46,6 +46,7 @@ jobs:
             echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" > .env
             echo "ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}" >> .env
             echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d flask_db
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build flask_app
             docker exec -i flask_db psql -U postgres -d postgres < migrations/001_birthday_nullable.sql
             docker exec -i flask_db psql -U postgres -d postgres < migrations/002_jobs_comments_nullable.sql

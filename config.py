@@ -12,8 +12,9 @@ FRONTEND_URL = environ.get('FRONTEND_URL', 'http://localhost:5173')
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20 Mo
 
 SQLALCHEMY_ENGINE_OPTIONS = {
-    "pool_size": 5,
-    "max_overflow": 5,
+    "pool_size": 2,
+    "max_overflow": 3,
     "pool_pre_ping": True,
     "pool_recycle": 300,
+    "pool_timeout": 10,
 }
