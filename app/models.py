@@ -221,7 +221,7 @@ class Picture(db.Model):
     # query: db.Query  # autocomplete
     id_picture = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String, nullable=False)
-    picture_date = db.Column(db.DateTime, nullable=False)
+    picture_date = db.Column(db.DateTime, nullable=True)
     comments = db.Column(db.String, nullable=False)
     header_picture = db.Column(db.Boolean, default=False)
     face_x = db.Column(db.Integer, nullable=True)

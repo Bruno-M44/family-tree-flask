@@ -64,4 +64,8 @@ def create_app(test_config=None):
     app.register_blueprint(pet_picture_app)
     app.register_blueprint(command_app)
 
+    from app.db_migrations import run_migrations
+    with app.app_context():
+        run_migrations(db)
+
     return app
