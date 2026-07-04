@@ -26,12 +26,20 @@ def run_migrations(db):
         if is_postgres:
             conn.execute(text("SELECT pg_advisory_lock(202406191)"))
         try:
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS schema_migrations (
-                    filename  VARCHAR(255) PRIMARY KEY,
-                    applied_at TIMESTAMP DEFAULT NOW()
-                )
-            """))
+            if is_postgres:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS schema_migrations (
+                        filename   VARCHAR(255) PRIMARY KEY,
+                        applied_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+            else:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS schema_migrations (
+                        filename   VARCHAR(255) PRIMARY KEY,
+                        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
             conn.commit()
 
             result = conn.execute(text("SELECT filename FROM schema_migrations"))
