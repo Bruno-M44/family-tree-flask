@@ -16,6 +16,7 @@ from ..models import (
 )
 from ..schemas import family_trees_schema, family_tree_schema
 from app import db
+from .utils import detect_face
 
 family_tree_app = Blueprint("family_tree_app", __name__)
 
@@ -250,8 +251,9 @@ def import_family_tree():
                     new_filename = f"{uuid.uuid4()}{ext}"
                     pic_dir = f"/pictures/{new_tree.id_family_tree}/{new_cell.id_family_tree_cell}"
                     os.makedirs(pic_dir, exist_ok=True)
+                    filepath = f"{pic_dir}/{new_filename}"
                     if pic_data["zip_path"] in zf.namelist():
-                        with zf.open(pic_data["zip_path"]) as src, open(f"{pic_dir}/{new_filename}", "wb") as dst:
+                        with zf.open(pic_data["zip_path"]) as src, open(filepath, "wb") as dst:
                             dst.write(src.read())
                     new_pic = Picture(
                         filename=new_filename,
@@ -259,10 +261,22 @@ def import_family_tree():
                         comments=pic_data.get("comments") or "",
                         header_picture=pic_data.get("header_picture", False),
                     )
-                    new_pic.face_x = pic_data.get("face_x")
-                    new_pic.face_y = pic_data.get("face_y")
-                    new_pic.face_width = pic_data.get("face_width")
-                    new_pic.face_height = pic_data.get("face_height")
+                    # Prioritise face coords from ZIP; run detection if absent
+                    face_x = pic_data.get("face_x")
+                    if face_x is None and os.path.exists(filepath):
+                        try:
+                            detected = detect_face(filepath)
+                        except Exception:
+                            detected = None
+                        if detected:
+                            face_x, face_y, face_w, face_h = detected
+                            new_pic.face_x, new_pic.face_y = face_x, face_y
+                            new_pic.face_width, new_pic.face_height = face_w, face_h
+                    else:
+                        new_pic.face_x = face_x
+                        new_pic.face_y = pic_data.get("face_y")
+                        new_pic.face_width = pic_data.get("face_width")
+                        new_pic.face_height = pic_data.get("face_height")
                     new_pic.id_family_tree_cell = new_cell.id_family_tree_cell
                     db.session.add(new_pic)
 
@@ -284,8 +298,9 @@ def import_family_tree():
                         new_filename = f"{uuid.uuid4()}{ext}"
                         pp_dir = f"/pet_pictures/{new_tree.id_family_tree}/{new_cell.id_family_tree_cell}/{new_pet.id_pet}"
                         os.makedirs(pp_dir, exist_ok=True)
+                        pp_filepath = f"{pp_dir}/{new_filename}"
                         if pp_data["zip_path"] in zf.namelist():
-                            with zf.open(pp_data["zip_path"]) as src, open(f"{pp_dir}/{new_filename}", "wb") as dst:
+                            with zf.open(pp_data["zip_path"]) as src, open(pp_filepath, "wb") as dst:
                                 dst.write(src.read())
                         new_pp = PetPicture(
                             filename=new_filename,
@@ -293,10 +308,19 @@ def import_family_tree():
                             comments=pp_data.get("comments") or "",
                             is_main=pp_data.get("is_main", False),
                         )
-                        new_pp.face_x = pp_data.get("face_x")
-                        new_pp.face_y = pp_data.get("face_y")
-                        new_pp.face_width = pp_data.get("face_width")
-                        new_pp.face_height = pp_data.get("face_height")
+                        pp_face_x = pp_data.get("face_x")
+                        if pp_face_x is None and os.path.exists(pp_filepath):
+                            try:
+                                pp_detected = detect_face(pp_filepath)
+                            except Exception:
+                                pp_detected = None
+                            if pp_detected:
+                                new_pp.face_x, new_pp.face_y, new_pp.face_width, new_pp.face_height = pp_detected
+                        else:
+                            new_pp.face_x = pp_face_x
+                            new_pp.face_y = pp_data.get("face_y")
+                            new_pp.face_width = pp_data.get("face_width")
+                            new_pp.face_height = pp_data.get("face_height")
                         new_pp.id_pet = new_pet.id_pet
                         db.session.add(new_pp)
 
