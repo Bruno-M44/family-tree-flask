@@ -21,9 +21,10 @@ def _split_statements(sql_content):
 
 
 def run_migrations(db):
+    is_postgres = db.engine.dialect.name == 'postgresql'
     with db.engine.connect() as conn:
-        # Advisory lock so concurrent gunicorn workers don't race
-        conn.execute(text("SELECT pg_advisory_lock(202406191)"))
+        if is_postgres:
+            conn.execute(text("SELECT pg_advisory_lock(202406191)"))
         try:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -57,4 +58,5 @@ def run_migrations(db):
                     # Another worker already recorded this migration
                     conn.rollback()
         finally:
-            conn.execute(text("SELECT pg_advisory_unlock(202406191)"))
+            if is_postgres:
+                conn.execute(text("SELECT pg_advisory_unlock(202406191)"))
