@@ -51,10 +51,11 @@ def run_migrations(db):
                 if filename in applied:
                     continue
                 logger.info("Running migration: %s", filename)
-                with open(filepath, 'r') as f:
-                    content = f.read()
-                for stmt in _split_statements(content):
-                    conn.execute(text(stmt))
+                if is_postgres:
+                    with open(filepath, 'r') as f:
+                        content = f.read()
+                    for stmt in _split_statements(content):
+                        conn.execute(text(stmt))
                 try:
                     conn.execute(
                         text("INSERT INTO schema_migrations (filename) VALUES (:f)"),
