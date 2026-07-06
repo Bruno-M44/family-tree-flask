@@ -83,7 +83,7 @@ def _build_html(header_title: str, header_subtitle: str, body: str, btn_label: s
 </html>"""
 
 
-def _send(to_email: str, subject: str, html: str, log_fallback: str) -> None:
+def _send(to_email: str, subject: str, html: str, text: str, log_fallback: str) -> None:
     """Send an email via Resend or log the fallback URL in dev mode."""
     api_key: str = current_app.config.get('RESEND_API_KEY')
     if not api_key:
@@ -96,6 +96,7 @@ def _send(to_email: str, subject: str, html: str, log_fallback: str) -> None:
             "to": to_email,
             "subject": subject,
             "html": html,
+            "text": text,
         })
     except ResendError as err:
         current_app.logger.error("Failed to send email to %s: %s", to_email, err)
@@ -118,7 +119,12 @@ def send_verification_email(to_email: str, token: str) -> None:
         btn_label="Vérifier mon adresse email",
         btn_url=verify_url,
     )
-    _send(to_email, "Vérifiez votre adresse email – Family Tree", html,
+    text = (
+        "Merci pour votre inscription sur Family Tree !\n\n"
+        "Pour activer votre compte, ouvrez ce lien (valable 24 heures) :\n"
+        f"{verify_url}"
+    )
+    _send(to_email, "Vérifiez votre adresse email – Family Tree", html, text,
           f"Verify link: {verify_url}")
 
 
@@ -147,7 +153,13 @@ def send_member_added_email(
         btn_label="Voir l'arbre généalogique",
         btn_url=frontend_url,
     )
-    _send(to_email, f"Vous avez été ajouté à l'arbre « {tree_title} »", html,
+    text = (
+        f"Bonjour,\n\n"
+        f"{inviter_name} vous a ajouté à son arbre généalogique : {tree_title} (famille {family_name}).\n\n"
+        "Connectez-vous à votre compte pour le consulter :\n"
+        f"{frontend_url}"
+    )
+    _send(to_email, f"Vous avez été ajouté à l'arbre « {tree_title} »", html, text,
           f"Member added to tree '{tree_title}'")
 
 
@@ -169,7 +181,13 @@ def send_platform_invitation_email(to_email: str, inviter_name: str) -> None:
         btn_label="Créer mon compte",
         btn_url=register_url,
     )
-    _send(to_email, "Vous êtes invité sur Family Tree", html,
+    text = (
+        f"Bonjour,\n\n"
+        f"{inviter_name} vous invite à rejoindre Family Tree, l'application de création d'arbres généalogiques.\n\n"
+        "Créez votre compte gratuitement :\n"
+        f"{register_url}"
+    )
+    _send(to_email, "Vous êtes invité sur Family Tree", html, text,
           f"Platform invitation link: {register_url}")
 
 
@@ -202,5 +220,12 @@ def send_member_invitation_email(
         btn_label="Créer mon compte",
         btn_url=register_url,
     )
-    _send(to_email, f"Invitation à rejoindre l'arbre généalogique « {tree_title} »", html,
+    text = (
+        f"Bonjour,\n\n"
+        f"{inviter_name} vous invite à rejoindre son arbre généalogique : {tree_title} (famille {family_name}).\n\n"
+        "Pour y accéder, créez votre compte gratuitement avec cette adresse email "
+        "(vous serez automatiquement ajouté à l'arbre). Ce lien est valable 7 jours :\n"
+        f"{register_url}"
+    )
+    _send(to_email, f"Invitation à rejoindre l'arbre généalogique « {tree_title} »", html, text,
           f"Invitation link: {register_url}")
