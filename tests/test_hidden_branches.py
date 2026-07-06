@@ -234,7 +234,8 @@ def test_put_hidden_branches_isolation_between_users(
     cell_id: int,
 ) -> None:
     """Each user's hidden branches are stored independently."""
-    # Create a second user and add them to the tree
+    # Create a second user and add them to the tree as editor
+    # (viewers cannot PUT hidden branches, see test_put_hidden_branches_forbidden_for_viewer)
     client.post("/user", json={
         "name": "Second", "surname": "Member",
         "email": "second@test.com", "password": "pw2",
@@ -247,7 +248,7 @@ def test_put_hidden_branches_isolation_between_users(
         insert(association_user_ft).values(
             id_user=user2.id_user,
             id_family_tree=family_tree_id,
-            role="viewer",
+            role="editor",
         )
     )
     _db.session.commit()
@@ -271,3 +272,44 @@ def test_put_hidden_branches_isolation_between_users(
 
     assert resp1.get_json()["data"] == {"hidden_above": [cell_id], "hidden_below": []}
     assert resp2.get_json()["data"] == {"hidden_above": [], "hidden_below": [cell_id]}
+
+
+def test_put_hidden_branches_forbidden_for_viewer(
+    client: FlaskClient,
+    auth_headers: dict,
+    family_tree_id: int,
+    cell_id: int,
+) -> None:
+    """A viewer cannot hide/show branches, but can still read the state."""
+    client.post("/user", json={
+        "name": "Viewer", "surname": "User",
+        "email": "viewer_hb@test.com", "password": "pw3",
+    })
+    from app.models import User
+    viewer = User.query.filter_by(email="viewer_hb@test.com").first()
+    viewer.verified = True
+    _db.session.commit()
+    _db.session.execute(
+        insert(association_user_ft).values(
+            id_user=viewer.id_user,
+            id_family_tree=family_tree_id,
+            role="viewer",
+        )
+    )
+    _db.session.commit()
+    login = client.post("/login", json={"email": "viewer_hb@test.com", "password": "pw3"})
+    viewer_headers = {"Authorization": f"Bearer {login.get_json()['data']}"}
+
+    put_response = client.put(
+        f"/family_trees/{family_tree_id}/hidden_branches",
+        json={"hidden_above": [cell_id], "hidden_below": []},
+        headers=viewer_headers,
+    )
+    assert put_response.status_code == 403
+
+    get_response = client.get(
+        f"/family_trees/{family_tree_id}/hidden_branches",
+        headers=viewer_headers,
+    )
+    assert get_response.status_code == 200
+    assert get_response.get_json()["data"] == {"hidden_above": [], "hidden_below": []}

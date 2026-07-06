@@ -1,19 +1,25 @@
 from datetime import datetime, timezone
+from typing import Optional
+
 from flask import jsonify, make_response, request, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import FamilyTree, FamilyTreeCell, FamilyTreeHiddenBranches, association_user_ft
+from ..models import FamilyTreeCell, FamilyTreeHiddenBranches, association_user_ft
 from app import db
 
 hidden_branches_app = Blueprint("hidden_branches_app", __name__)
 
 
-def _is_member(id_user: int, id_family_tree: int) -> bool:
-    return FamilyTree.query.join(association_user_ft).filter(
-        association_user_ft.c.id_user == id_user,
-        FamilyTree.id_family_tree == id_family_tree,
-    ).first() is not None
+def _get_role(id_user: int, id_family_tree: int) -> Optional[str]:
+    row = db.session.execute(
+        select(association_user_ft.c.role).where(
+            association_user_ft.c.id_user == id_user,
+            association_user_ft.c.id_family_tree == id_family_tree,
+        )
+    ).first()
+    return row[0] if row else None
 
 
 @hidden_branches_app.route(
@@ -24,9 +30,13 @@ def _is_member(id_user: int, id_family_tree: int) -> bool:
 @jwt_required()
 def hidden_branches(id_family_tree: int):
     current_user = int(get_jwt_identity())
+    role = _get_role(current_user, id_family_tree)
 
-    if not _is_member(current_user, id_family_tree):
+    if role is None:
         return make_response(jsonify({"message": "Access denied"}), 403)
+
+    if request.method == "PUT" and role != "editor":
+        return make_response(jsonify({"message": "Viewers cannot hide branches"}), 403)
 
     if request.method == "GET":
         row = FamilyTreeHiddenBranches.query.filter_by(
