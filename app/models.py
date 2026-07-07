@@ -82,6 +82,7 @@ class User(db.Model):
     password = db.Column(db.String, nullable=False)
     verified = db.Column(db.Boolean, nullable=False, default=False)
     verification_token = db.Column(db.String, nullable=True)
+    verification_token_created_at = db.Column(db.DateTime, nullable=True)
     avatar = db.Column(db.String, nullable=True)
     avatar_face_x = db.Column(db.Integer, nullable=True)
     avatar_face_y = db.Column(db.Integer, nullable=True)

@@ -44,11 +44,44 @@ def test_update_user_name(client, auth_headers):
 
 def test_update_user_password(client, auth_headers):
     new_password = 'new_secure_password'
-    response = client.put('/user', json={'password': new_password}, headers=auth_headers)
+    response = client.put(
+        '/user',
+        json={'password': new_password, 'current_password': USER_1['password']},
+        headers=auth_headers,
+    )
     assert response.status_code == 200
     # Verify new password works for login
     login_resp = client.post('/login', json={**USER_1, 'password': new_password})
     assert login_resp.status_code == 200
+
+
+def test_update_user_password_requires_current_password(client, auth_headers):
+    response = client.put('/user', json={'password': 'new_secure_password'}, headers=auth_headers)
+    assert response.status_code == 401
+
+
+def test_update_user_password_rejects_wrong_current_password(client, auth_headers):
+    response = client.put(
+        '/user',
+        json={'password': 'new_secure_password', 'current_password': 'wrong'},
+        headers=auth_headers,
+    )
+    assert response.status_code == 401
+    # Old password must still work
+    login_resp = client.post('/login', json=USER_1)
+    assert login_resp.status_code == 200
+
+
+def test_update_user_password_revokes_current_token(client, auth_headers):
+    response = client.put(
+        '/user',
+        json={'password': 'new_secure_password', 'current_password': USER_1['password']},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    # The token used for this request must now be revoked
+    stale_response = client.get('/user', headers=auth_headers)
+    assert stale_response.status_code == 401
 
 
 def test_delete_user(client, auth_headers):
@@ -82,6 +115,25 @@ def test_verify_email_invalid_token(client):
 def test_verify_email_missing_token(client):
     response = client.get('/verify')
     assert response.status_code == 400
+
+
+def test_verify_email_expired_token(client):
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+    from app import db as _db
+    from app.models import User
+
+    with patch('app.views.user_view.create_demo_family_tree'):
+        with patch('app.views.user_view.send_verification_email') as mock_send:
+            client.post('/user', json=USER_1)
+            token = mock_send.call_args[0][1]
+
+    user = User.query.filter_by(email=USER_1['email']).first()
+    user.verification_token_created_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=8)
+    _db.session.commit()
+
+    response = client.get(f'/verify?token={token}')
+    assert response.status_code == 404
 
 
 def test_create_user_has_verified_false(client):

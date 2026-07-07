@@ -6,14 +6,14 @@ import zipfile
 from typing import Optional
 import werkzeug.exceptions
 from flask import jsonify, make_response, request, Blueprint, Response, send_from_directory
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func, select, insert, delete, update
 from sqlalchemy.exc import SQLAlchemyError
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from .utils import allowed_file
-from ..models import User, FamilyTree, FamilyTreeInvitation, association_user_ft, FamilyTreeCell, Picture, Pet, PetPicture, association_parent_child, association_couple
+from ..models import User, FamilyTree, FamilyTreeInvitation, TokenBlocklist, association_user_ft, FamilyTreeCell, Picture, Pet, PetPicture, association_parent_child, association_couple
 from ..schemas import user_schema, family_tree_schema
 from ..demo.creator import create_demo_family_tree
 from datetime import datetime, timedelta, timezone
@@ -32,8 +32,12 @@ def verify_email():
     user = User.query.filter_by(verification_token=token).first()
     if not user:
         return make_response(jsonify({"message": "Invalid or expired token", "status": 404}), 404)
+    expiry_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+    if user.verification_token_created_at and user.verification_token_created_at < expiry_cutoff:
+        return make_response(jsonify({"message": "Invalid or expired token", "status": 404}), 404)
     user.verified = True
     user.verification_token = None
+    user.verification_token_created_at = None
     try:
         db.session.commit()
     except SQLAlchemyError as err:
@@ -203,6 +207,7 @@ def create_user():
             password=body['password']
         )
         new_user.verification_token = token
+        new_user.verification_token_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.session.add(new_user)
         db.session.flush()
         create_demo_family_tree(new_user)
@@ -230,6 +235,7 @@ def create_user():
 
 @user_app.route("/user", methods=["PUT"], endpoint="update_user")
 @jwt_required()
+@limiter.limit("10 per hour")
 def update_user():
     current_user = int(get_jwt_identity())
     user = db.session.get(User, current_user)
@@ -244,15 +250,25 @@ def update_user():
         user.email = data['email']
         user.verified = False
         user.verification_token = str(uuid.uuid4())
+        user.verification_token_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
         send_verification_email(user.email, user.verification_token)
+    password_changed = False
     if 'password' in data:
+        if not check_password_hash(user.password, data.get('current_password') or ''):
+            return make_response(jsonify({"message": "Current password is incorrect", "status": 401}), 401)
         user.password = generate_password_hash(data['password'])
+        password_changed = True
 
     try:
         db.session.commit()
     except SQLAlchemyError as err:
         db.session.rollback()
         return make_response(jsonify({"message": f"Database error: {err}", "status": 500}), 500)
+
+    if password_changed:
+        db.session.add(TokenBlocklist(jti=get_jwt()["jti"]))
+        db.session.commit()
+
     result = user_schema.dump(user)
     data = {
         "message": "User Modified !",

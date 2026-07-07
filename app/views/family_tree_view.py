@@ -20,6 +20,11 @@ from .utils import detect_face
 
 family_tree_app = Blueprint("family_tree_app", __name__)
 
+# Guards against zip-bomb archives: caps the total uncompressed size read
+# into memory/disk during import, independent of the (much smaller) compressed
+# upload size already bounded by MAX_CONTENT_LENGTH.
+MAX_IMPORT_UNCOMPRESSED_SIZE = 300 * 1024 * 1024  # 300 MB
+
 
 @family_tree_app.route("/family_trees", methods=["GET"], endpoint="get_family_trees")
 @jwt_required()
@@ -212,6 +217,10 @@ def import_family_tree():
         with zipfile.ZipFile(io.BytesIO(file.read())) as zf:
             if "tree.json" not in zf.namelist():
                 return make_response(jsonify({"message": "Invalid archive: missing tree.json"}), 400)
+
+            total_uncompressed = sum(info.file_size for info in zf.infolist())
+            if total_uncompressed > MAX_IMPORT_UNCOMPRESSED_SIZE:
+                return make_response(jsonify({"message": "Archive too large once uncompressed"}), 400)
 
             tree_data = json.loads(zf.read("tree.json"))
             for field in ("title", "family_name", "cells", "relations"):
