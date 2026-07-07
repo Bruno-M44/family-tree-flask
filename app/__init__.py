@@ -9,9 +9,20 @@ from flask_marshmallow import Marshmallow
 from flask_cors import CORS
 from datetime import timedelta
 
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+
 db = SQLAlchemy()
 jwt = JWTManager()
 ma = Marshmallow()
+
+if environ.get('GLITCHTIP_DSN'):
+    sentry_sdk.init(
+        dsn=environ['GLITCHTIP_DSN'],
+        integrations=[FlaskIntegration()],
+        traces_sample_rate=0,
+        environment='development' if environ.get('FLASK_DEBUG') else 'production',
+    )
 
 
 def create_app(test_config=None):

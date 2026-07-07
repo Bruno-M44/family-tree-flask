@@ -11,5 +11,6 @@ psycopg[binary]
 python-dotenv
 cryptography
 resend
+sentry-sdk[flask]
 opencv-python-headless
 mediapipe

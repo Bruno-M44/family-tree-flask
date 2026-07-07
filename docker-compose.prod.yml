@@ -8,3 +8,4 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - FRONTEND_URL=https://family-tree.io
+      - GLITCHTIP_DSN=${GLITCHTIP_DSN}
