@@ -393,6 +393,21 @@ def get_update_delete_family_tree(id_family_tree: int):
             "data": result
         }
         return make_response(jsonify(data), data["status"])
+
+    if request.method in ("PUT", "DELETE"):
+        role = db.session.execute(
+            select(association_user_ft.c.role).where(
+                association_user_ft.c.id_user == current_user,
+                association_user_ft.c.id_family_tree == id_family_tree,
+            )
+        ).scalar_one_or_none()
+        if role != "editor":
+            data = {
+                "message": "Viewers cannot modify or delete this family tree",
+                "status": 403,
+            }
+            return make_response(jsonify(data), data["status"])
+
     if request.method == "PUT":
         family_tree = db.session.get(FamilyTree, id_family_tree)
         data = request.get_json() or {}

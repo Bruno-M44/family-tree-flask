@@ -18,7 +18,7 @@ from ..schemas import user_schema, family_tree_schema
 from ..demo.creator import create_demo_family_tree
 from datetime import datetime, timedelta, timezone
 from ..email_service import send_verification_email, send_member_added_email, send_member_invitation_email
-from app import db
+from app import db, limiter
 
 
 user_app = Blueprint("user_app", __name__)
@@ -183,6 +183,7 @@ def _consume_invitations(user: User) -> None:
 
 
 @user_app.route("/user", methods=["POST"], endpoint="create_user")
+@limiter.limit("5 per hour")
 def create_user():
     body = request.get_json() or {}
     required = ['name', 'surname', 'email', 'password']

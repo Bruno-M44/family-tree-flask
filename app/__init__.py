@@ -7,6 +7,8 @@ from sqlalchemy import event
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from datetime import timedelta
 
 import sentry_sdk
@@ -15,6 +17,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 db = SQLAlchemy()
 jwt = JWTManager()
 ma = Marshmallow()
+limiter = Limiter(key_func=get_remote_address)
 
 if environ.get('GLITCHTIP_DSN'):
     sentry_sdk.init(
@@ -40,11 +43,12 @@ def create_app(test_config=None):
         app.config.pop('SQLALCHEMY_ENGINE_OPTIONS', None)
 
     CORS(app,
-         origins=environ.get('CORS_ORIGINS', '*'),
+         origins=environ.get('CORS_ORIGINS', '').split(',') if environ.get('CORS_ORIGINS') else [],
          allow_headers=['Authorization', 'Content-Type'])
     db.init_app(app)
     jwt.init_app(app)
     ma.init_app(app)
+    limiter.init_app(app)
 
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
