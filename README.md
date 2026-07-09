@@ -127,7 +127,10 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 |---|---|---|
 | `DB_URL` | URL de connexion PostgreSQL | Oui |
 | `JWT_SECRET_KEY` | Clé secrète pour signer les tokens JWT | Oui |
-| `CORS_ORIGINS` | Origines autorisées pour le CORS (ex: `https://family-tree.io`) | Non (défaut : `*`) |
+| `CORS_ORIGINS` | Origines autorisées pour le CORS (ex: `https://family-tree.io`) | Non (défaut : aucune origine) |
+| `ENCRYPTION_KEY` | Clé Fernet pour le chiffrement des champs sensibles en base | Oui |
+| `RESEND_API_KEY` | Clé API Resend pour l'envoi d'emails transactionnels | Oui |
+| `GLITCHTIP_DSN` | DSN Sentry/GlitchTip pour le suivi d'erreurs (no-op si absent) | Non |
 
 ---
 
@@ -230,3 +233,9 @@ Les secrets à configurer dans GitHub Actions :
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build flask_app
 ```
+
+---
+
+## Monitoring & infrastructure
+
+Le VPS de production héberge aussi une stack de supervision (suivi d'erreurs, disponibilité, métriques système) et des sauvegardes automatiques de la base. Cette partie ne fait pas partie de ce dépôt : voir `~/INFRASTRUCTURE.md` sur le VPS pour le détail (sous-domaines, accès, sauvegardes, état de la sécurisation).
