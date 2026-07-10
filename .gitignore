@@ -18,3 +18,5 @@ pet_pictures/
 .env
 *.db
 PREFERENCES.md
+.coverage
+htmlcov/
