@@ -64,6 +64,17 @@ def test_update_family_tree(client, auth_headers, created_family_tree):
     assert response.get_json()['data']['title'] == 'Updated Title'
 
 
+def test_update_family_tree_family_name_only(client, auth_headers, created_family_tree):
+    ft_id = created_family_tree['id_family_tree']
+    response = client.put(
+        f'/family_trees/{ft_id}',
+        json={'family_name': 'Updated Family'},
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    assert response.get_json()['data']['family_name'] == 'Updated Family'
+
+
 def test_delete_family_tree(client, auth_headers, created_family_tree):
     ft_id = created_family_tree['id_family_tree']
     response = client.delete(f'/family_trees/{ft_id}', headers=auth_headers)

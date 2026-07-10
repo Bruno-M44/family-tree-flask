@@ -223,7 +223,7 @@ class Picture(db.Model):
     id_picture = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String, nullable=False)
     picture_date = db.Column(db.DateTime, nullable=True)
-    comments = db.Column(db.String, nullable=False)
+    comments = db.Column(db.String, nullable=True)
     header_picture = db.Column(db.Boolean, default=False)
     face_x = db.Column(db.Integer, nullable=True)
     face_y = db.Column(db.Integer, nullable=True)
