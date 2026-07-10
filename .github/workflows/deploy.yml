@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Create upload directories
+        run: |
+          sudo mkdir -p /pictures /pet_pictures /avatars
+          sudo chown -R "$USER" /pictures /pet_pictures /avatars
+
       - name: Run tests
         run: pytest tests/ -v --tb=short
 
