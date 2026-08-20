@@ -26,6 +26,12 @@ def run_migrations(db):
         if is_postgres:
             conn.execute(text("SELECT pg_advisory_lock(202406191)"))
         try:
+            # Create any missing tables first (no-op if the schema already exists) so
+            # migrations running against a brand-new database have base tables to alter.
+            # Serialized by the advisory lock above so concurrent gunicorn workers don't
+            # race each other creating the same tables/types.
+            db.create_all()
+
             if is_postgres:
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS schema_migrations (
