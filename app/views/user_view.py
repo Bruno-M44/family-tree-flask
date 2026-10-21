@@ -5,7 +5,7 @@ import uuid
 import zipfile
 from typing import Optional
 import werkzeug.exceptions
-from flask import jsonify, make_response, request, Blueprint, Response, send_from_directory
+from flask import current_app, jsonify, make_response, request, Blueprint, Response, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func, select, insert, delete, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -116,6 +116,8 @@ def export_user_data():
         "family_trees": family_trees_data,
     }
 
+    pictures_root = current_app.config['PICTURES_ROOT']
+    pet_pictures_root = current_app.config['PET_PICTURES_ROOT']
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("data.json", json.dumps(export, ensure_ascii=False, indent=2))
@@ -125,12 +127,12 @@ def export_user_data():
             cells = FamilyTreeCell.query.filter_by(id_family_tree=ft_id).all()
             for cell in cells:
                 for pic in cell.pictures:
-                    src = f"/pictures/{ft_id}/{cell.id_family_tree_cell}/{pic.filename}"
+                    src = f"{pictures_root}/{ft_id}/{cell.id_family_tree_cell}/{pic.filename}"
                     if os.path.isfile(src):
                         zf.write(src, f"pictures/{ft_id}/{cell.id_family_tree_cell}/{pic.filename}")
                 for pet in cell.pets:
                     for pet_pic in pet.pets_pictures:
-                        src = f"/pet_pictures/{ft_id}/{cell.id_family_tree_cell}/{pet.id_pet}/{pet_pic.filename}"
+                        src = f"{pet_pictures_root}/{ft_id}/{cell.id_family_tree_cell}/{pet.id_pet}/{pet_pic.filename}"
                         if os.path.isfile(src):
                             zf.write(src, f"pet_pictures/{ft_id}/{cell.id_family_tree_cell}/{pet.id_pet}/{pet_pic.filename}")
 
@@ -550,7 +552,7 @@ def get_avatar() -> Response:
     if not user.avatar:
         return make_response(jsonify({"message": "No avatar", "status": 404}), 404)
 
-    return send_from_directory(f"/avatars/{current_user}", user.avatar)
+    return send_from_directory(f"{current_app.config['AVATARS_ROOT']}/{current_user}", user.avatar)
 
 
 @user_app.route("/user/avatar", methods=["POST"], endpoint="upload_avatar")
@@ -570,16 +572,17 @@ def upload_avatar() -> Response:
     if not allowed_file(file.filename):
         return make_response(jsonify({"message": "File not allowed", "status": 400}), 400)
 
+    avatars_root = current_app.config['AVATARS_ROOT']
     if user.avatar:
-        old_path: str = f"/avatars/{current_user}/{user.avatar}"
+        old_path: str = f"{avatars_root}/{current_user}/{user.avatar}"
         try:
             os.remove(old_path)
         except FileNotFoundError:
             pass
 
     filename: str = secure_filename(str(uuid.uuid4()) + "." + file.filename.rsplit(".", 1)[1].lower())
-    filepath: str = f"/avatars/{current_user}/{filename}"
-    os.makedirs(f"/avatars/{current_user}", exist_ok=True)
+    filepath: str = f"{avatars_root}/{current_user}/{filename}"
+    os.makedirs(f"{avatars_root}/{current_user}", exist_ok=True)
     file.save(filepath)
 
     from .utils import detect_face
@@ -609,7 +612,7 @@ def delete_avatar() -> Response:
         return make_response(jsonify({"message": "No avatar to delete", "status": 404}), 404)
 
     try:
-        os.remove(f"/avatars/{current_user}/{user.avatar}")
+        os.remove(f"{current_app.config['AVATARS_ROOT']}/{current_user}/{user.avatar}")
     except FileNotFoundError:
         pass
 
@@ -662,7 +665,7 @@ def delete_user():
             ).all()
             for pic in pictures:
                 files_to_delete.append(
-                    f"/pictures/{id_family_tree}/{pic.id_family_tree_cell}/{pic.filename}"
+                    f"{current_app.config['PICTURES_ROOT']}/{id_family_tree}/{pic.id_family_tree_cell}/{pic.filename}"
                 )
 
             # Collect pet picture file paths before deletion (CASCADE will remove DB rows)
@@ -670,7 +673,7 @@ def delete_user():
             for pet in pets:
                 for pet_pic in pet.pets_pictures:
                     files_to_delete.append(
-                        f"/pet_pictures/{id_family_tree}/{pet.id_family_tree_cell}"
+                        f"{current_app.config['PET_PICTURES_ROOT']}/{id_family_tree}/{pet.id_family_tree_cell}"
                         f"/{pet.id_pet}/{pet_pic.filename}"
                     )
 

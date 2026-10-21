@@ -22,8 +22,18 @@ USER_1 = {
 
 
 @pytest.fixture
-def app():
-    app = create_app(test_config=TEST_CONFIG)
+def app(tmp_path):
+    # Chaque test écrit ses photos dans un dossier temporaire dédié, jamais dans
+    # /pictures, /pet_pictures, /avatars — sinon les IDs (repartant de 1 à chaque
+    # test, la DB étant une SQLite en mémoire recréée à chaque fois) entrent en
+    # collision avec ces mêmes chemins utilisés par de vraies données en dev/prod.
+    test_config = {
+        **TEST_CONFIG,
+        'PICTURES_ROOT': str(tmp_path / 'pictures'),
+        'PET_PICTURES_ROOT': str(tmp_path / 'pet_pictures'),
+        'AVATARS_ROOT': str(tmp_path / 'avatars'),
+    }
+    app = create_app(test_config=test_config)
     with app.app_context():
         _db.create_all()
         yield app
