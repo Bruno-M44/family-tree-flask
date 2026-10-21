@@ -4,7 +4,7 @@ import os
 import uuid
 import werkzeug.exceptions
 from datetime import datetime
-from flask import jsonify, make_response, request, Blueprint, send_from_directory
+from flask import current_app, jsonify, make_response, request, Blueprint, send_from_directory
 from flask_jwt_extended import jwt_required
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import SQLAlchemyError
@@ -121,7 +121,7 @@ def download_pet_picture(id_pet: int, id_pet_picture: int):
 
     result = pet_picture_schema.dump(pet_picture)
     return send_from_directory(
-        directory=f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}",
+        directory=f"{current_app.config['PET_PICTURES_ROOT']}/{id_family_tree}/{id_family_tree_cell}/{id_pet}",
         path=result["filename"],
         as_attachment=True
     )
@@ -147,7 +147,7 @@ def delete_pet_picture(id_pet: int, id_pet_picture: int):
         return err
 
     try:
-        os.remove(f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{pet_picture.filename}")
+        os.remove(f"{current_app.config['PET_PICTURES_ROOT']}/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{pet_picture.filename}")
     except FileNotFoundError:
         pass
     db.session.delete(pet_picture)
@@ -180,8 +180,9 @@ def upload_pet_picture(id_pet: int):
         return err
 
     filename = secure_filename(str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower())
-    os.makedirs(f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}", exist_ok=True)
-    filepath = f"/pet_pictures/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{filename}"
+    pet_pictures_root = current_app.config['PET_PICTURES_ROOT']
+    os.makedirs(f"{pet_pictures_root}/{id_family_tree}/{id_family_tree_cell}/{id_pet}", exist_ok=True)
+    filepath = f"{pet_pictures_root}/{id_family_tree}/{id_family_tree_cell}/{id_pet}/{filename}"
     file.save(filepath)
 
     face = detect_face(filepath)

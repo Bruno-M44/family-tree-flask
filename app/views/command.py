@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 '''Commands usable by the application'''
 import click
-from flask import Blueprint
+from flask import Blueprint, current_app
 from .. import models
 from ..models import Picture, PetPicture, FamilyTreeCell, Pet
 from ..views.utils import detect_face
@@ -40,7 +40,7 @@ def detect_faces():
         cell = db.session.get(FamilyTreeCell, picture.id_family_tree_cell)
         if cell is None:
             continue
-        path = f"/pictures/{cell.id_family_tree}/{cell.id_family_tree_cell}/{picture.filename}"
+        path = f"{current_app.config['PICTURES_ROOT']}/{cell.id_family_tree}/{cell.id_family_tree_cell}/{picture.filename}"
         face = detect_face(path)
         if face:
             picture.face_x, picture.face_y, picture.face_width, picture.face_height = face
@@ -58,7 +58,7 @@ def detect_faces():
         cell = db.session.get(FamilyTreeCell, pet.id_family_tree_cell)
         if cell is None:
             continue
-        path = f"/pet_pictures/{cell.id_family_tree}/{cell.id_family_tree_cell}/{pet.id_pet}/{pet_picture.filename}"
+        path = f"{current_app.config['PET_PICTURES_ROOT']}/{cell.id_family_tree}/{cell.id_family_tree_cell}/{pet.id_pet}/{pet_picture.filename}"
         face = detect_face(path)
         if face:
             pet_picture.face_x, pet_picture.face_y, pet_picture.face_width, pet_picture.face_height = face

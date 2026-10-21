@@ -2,7 +2,7 @@ import os
 import uuid
 import werkzeug.exceptions
 from datetime import datetime
-from flask import jsonify, make_response, request, Blueprint, send_from_directory, send_file
+from flask import current_app, jsonify, make_response, request, Blueprint, send_from_directory, send_file
 from flask_jwt_extended import jwt_required
 from werkzeug.utils import secure_filename
 
@@ -106,7 +106,7 @@ def download_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: 
 
     result = picture_schema.dump(picture)
     return send_from_directory(
-        directory=f"/pictures/{id_family_tree}/{id_family_tree_cell}",
+        directory=f"{current_app.config['PICTURES_ROOT']}/{id_family_tree}/{id_family_tree_cell}",
         path=result["filename"],
         as_attachment=False
     )
@@ -124,7 +124,7 @@ def secure_picture(id_family_tree, id_family_tree_cell, id_picture):
         id_picture=id_picture
     ).first_or_404()
 
-    filepath = f"/pictures/{id_family_tree}/{id_family_tree_cell}/{picture.filename}"
+    filepath = f"{current_app.config['PICTURES_ROOT']}/{id_family_tree}/{id_family_tree_cell}/{picture.filename}"
     return send_file(filepath, mimetype="image/jpeg")
 
 
@@ -148,7 +148,7 @@ def delete_picture(id_family_tree: int, id_family_tree_cell: int, id_picture: in
         return make_response(jsonify(data), data["status"])
 
     try:
-        os.remove(f"/pictures/{id_family_tree}/{id_family_tree_cell}/{picture.filename}")
+        os.remove(f"{current_app.config['PICTURES_ROOT']}/{id_family_tree}/{id_family_tree_cell}/{picture.filename}")
     except FileNotFoundError:
         pass
     db.session.delete(picture)
@@ -187,8 +187,9 @@ def upload_picture(id_family_tree: int, id_family_tree_cell: int):
         return make_response(jsonify({"message": f"Missing fields: {', '.join(missing)}", "status": 400}), 400)
 
     filename = secure_filename(str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower())
-    os.makedirs(f"/pictures/{id_family_tree}/{id_family_tree_cell}", exist_ok=True)
-    filepath = f"/pictures/{id_family_tree}/{id_family_tree_cell}/{filename}"
+    pictures_root = current_app.config['PICTURES_ROOT']
+    os.makedirs(f"{pictures_root}/{id_family_tree}/{id_family_tree_cell}", exist_ok=True)
+    filepath = f"{pictures_root}/{id_family_tree}/{id_family_tree_cell}/{filename}"
     file.save(filepath)
 
     try:
